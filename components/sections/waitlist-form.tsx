@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { Loader2, CheckCircle2, Code2, Target } from 'lucide-react'
+import { WaitlistCount } from '@/components/shared/waitlist-count'
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   userType: z.enum(['developer', 'recruiter']),
@@ -26,6 +27,7 @@ type FormData = z.infer<typeof formSchema>
 export function WaitlistForm() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [waitlistPosition, setWaitlistPosition] = useState<number>(0)
 
   const { 
     register, 
@@ -66,6 +68,13 @@ export function WaitlistForm() {
         }
         throw error
       }
+
+      // Fetch the current waitlist count to show position
+      const { count: totalCount } = await supabase
+        .from('waitlist')
+        .select('*', { count: 'exact', head: true })
+      
+      setWaitlistPosition(totalCount || 0)
 
       // Success!
       setSubmitted(true)
@@ -122,9 +131,11 @@ export function WaitlistForm() {
                 <p className="text-gray-500 text-sm mb-6">
                   Check your email for confirmation
                 </p>
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-4 py-2">
-                  Waitlist Position: Top 1000
-                </Badge>
+                {waitlistPosition >= 100 && (
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-6 py-3 text-base">
+                    You're #{waitlistPosition.toLocaleString()} on the waitlist
+                  </Badge>
+                )}
               </div>
             </Card>
           </motion.div>
@@ -157,9 +168,16 @@ export function WaitlistForm() {
               Waitlist
             </span>
           </h2>
-          <p className="text-gray-400 text-base sm:text-lg px-4">
+          <p className="text-gray-400 text-base sm:text-lg px-4 mb-2">
             Be among the first verified developers on CredDev
           </p>
+          {/* Only show count in form when 100+ signups */}
+          <WaitlistCount 
+            showLabel={true}
+            userType="all"
+            className="text-purple-300 text-sm"
+            hideUntil={100}
+          />
         </motion.div>
 
         <motion.div

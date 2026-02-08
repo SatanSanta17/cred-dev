@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Sparkles, Github, Code2, Award } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
 import { FloatingCard } from '@/components/shared/floating-card'
+import { WaitlistCount } from '@/components/shared/waitlist-count'
 
 export function Hero() {
   const scrollToWaitlist = () => {
@@ -37,6 +38,21 @@ export function Hero() {
           >
             <Sparkles className="w-4 h-4 text-purple-400" />
             <span className="text-sm text-purple-300">Coming Soon - Join the Waitlist</span>
+          </motion.div>
+
+          {/* Waitlist Count - Only show when 100+ signups */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25 }}
+            className="text-center mb-6"
+          >
+            <WaitlistCount 
+              className="text-purple-300 text-sm" 
+              showLabel={true}
+              userType="all"
+              hideUntil={100}
+            />
           </motion.div>
 
           {/* Main Headline */}

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Code2, TrendingUp, Users, Target, Award, Sparkles } from 'lucide-react'
+import { WaitlistCount } from '@/components/shared/waitlist-count'
 
 const benefits = [
   {
@@ -107,7 +108,13 @@ export function ForDevelopers() {
         >
           <Card className="inline-block p-8 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
             <p className="text-xl text-gray-300 mb-2">
-              Join <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">1000+</span> developers already on the waitlist
+              <WaitlistCount 
+                userType="developer"
+                showLabel={true}
+                className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400"
+                hideUntil={100}
+                fallbackText="Join the large community of developers on the waitlist"
+              />
             </p>
             <p className="text-gray-500 text-sm">Be verified. Be discovered. Be ahead.</p>
           </Card>
