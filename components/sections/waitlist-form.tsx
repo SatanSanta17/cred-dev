@@ -126,10 +126,10 @@ export function WaitlistForm() {
                 </motion.div>
                 <h3 className="text-4xl font-bold mb-4">You're In! 🎉</h3>
                 <p className="text-gray-300 text-lg mb-2">
-                  Welcome to CredDev. We'll reach out soon with early access.
+                  Welcome to CredDev. You're officially on the waitlist!
                 </p>
                 <p className="text-gray-500 text-sm mb-6">
-                  Keep an eye on your inbox
+                  We'll reach out when we launch early access
                 </p>
                 {waitlistPosition >= 100 && (
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-6 py-3 text-base">
@@ -241,13 +241,27 @@ export function WaitlistForm() {
                       className="sr-only peer"
                       disabled={loading}
                     />
-                    <div className="p-4 border-2 border-slate-700 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-500/10 transition-all hover:border-slate-600 relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 opacity-0 peer-checked:opacity-100 transition-opacity" />
+                    <button
+                      type="button"
+                      data-recruiter-toggle="true"
+                      className={`w-full p-4 border-2 rounded-lg transition-all hover:border-slate-600 relative overflow-hidden group ${userType === 'recruiter'
+                        ? 'border-cyan-500 bg-cyan-500/10 bg-cyan-600'
+                        : 'border-slate-700'
+                        }`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const radioInput = e.currentTarget.previousElementSibling as HTMLInputElement
+                        if (radioInput) radioInput.click()
+                      }}
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 transition-opacity ${userType === 'recruiter' ? 'opacity-100' : 'opacity-0'
+                        }`} />
                       <div className="relative z-10 text-center">
-                        <Target className="w-8 h-8 mx-auto mb-2 text-blue-400 peer-checked:scale-110 transition-transform" />
+                        <Target className={`w-8 h-8 mx-auto mb-2 text-blue-400 transition-transform ${userType === 'recruiter' ? 'scale-110' : ''
+                          }`} />
                         <div className="font-semibold">Recruiter</div>
                       </div>
-                    </div>
+                    </button>
                   </label>
                 </div>
               </div>

@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Search, Filter, Clock, CheckCircle, BarChart3, Zap } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Search, Filter, Clock, CheckCircle, BarChart3, Zap, ArrowRight } from 'lucide-react'
 
 const benefits = [
   {
@@ -113,7 +114,7 @@ export function ForRecruiters() {
           ))}
         </div>
 
-        {/* Stats Section */}
+        {/* Benefits Overview */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -122,26 +123,26 @@ export function ForRecruiters() {
           className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
         >
           <Card className="p-6 text-center bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
-            <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 mb-2">
-              90%
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 mb-2">
+              Faster
             </div>
-            <p className="text-gray-400">Faster candidate screening</p>
+            <p className="text-gray-400">Reduce time-to-shortlist</p>
           </Card>
           <Card className="p-6 text-center bg-gradient-to-br from-cyan-500/10 to-green-500/10 border-cyan-500/20">
-            <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-green-400 mb-2">
-              10x
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-green-400 mb-2">
+              Accurate
             </div>
-            <p className="text-gray-400">More accurate skill matching</p>
+            <p className="text-gray-400">Filter by verified signals</p>
           </Card>
           <Card className="p-6 text-center bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
-            <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 mb-2">
-              100%
+            <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 mb-2">
+              Trusted
             </div>
-            <p className="text-gray-400">Verified developer profiles</p>
+            <p className="text-gray-400">Real skill data</p>
           </Card>
         </motion.div>
 
-        {/* CTA */}
+        {/* Separate Recruiter CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -149,11 +150,36 @@ export function ForRecruiters() {
           transition={{ duration: 0.6, delay: 0.9 }}
           className="mt-16 text-center"
         >
-          <Card className="inline-block p-8 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
-            <p className="text-xl text-gray-300 mb-2">
+          <Card className="inline-block p-6 sm:p-8 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20 mx-4 max-w-lg">
+            <p className="text-lg sm:text-xl text-gray-300 mb-3 sm:mb-4 font-semibold">
               Join leading companies using CredDev for hiring
             </p>
-            <p className="text-gray-500 text-sm">Early access for recruiters • No credit card required</p>
+            <p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6">
+              Early access for recruiters • Partnership opportunities available
+            </p>
+            <Button 
+              size="lg"
+              onClick={() => {
+                const waitlistSection = document.getElementById('waitlist')
+                if (waitlistSection) {
+                  waitlistSection.scrollIntoView({ behavior: 'smooth' })
+                  // Add a small delay to allow smooth scroll, then trigger recruiter selection
+                  setTimeout(() => {
+                    const recruiterButton = document.querySelector('[data-recruiter-toggle="true"]') as HTMLButtonElement
+                    if (recruiterButton && !recruiterButton.classList.contains('bg-cyan-600')) {
+                      recruiterButton.click()
+                    }
+                  }, 800)
+                }
+              }}
+              className="group bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-base sm:text-lg px-6 sm:px-8 py-4 sm:py-6 h-auto w-full sm:w-auto"
+            >
+              Request Recruiter Access
+              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+            <p className="text-xs text-gray-500 mt-3 sm:mt-4">
+              Limited spots available for early recruiter partners
+            </p>
           </Card>
         </motion.div>
       </div>
