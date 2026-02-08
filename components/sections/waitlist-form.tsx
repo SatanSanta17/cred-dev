@@ -129,7 +129,7 @@ export function WaitlistForm() {
                   Welcome to CredDev. We'll reach out soon with early access.
                 </p>
                 <p className="text-gray-500 text-sm mb-6">
-                  Check your email for confirmation
+                  Keep an eye on your inbox
                 </p>
                 {waitlistPosition >= 100 && (
                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30 px-6 py-3 text-base">
