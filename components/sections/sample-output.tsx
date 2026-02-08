@@ -21,7 +21,7 @@ const insights = [
 
 export function SampleOutput() {
   return (
-    <section className="py-20 px-6 bg-black relative overflow-hidden">
+    <section id="sample-output" className="py-20 px-6 bg-black relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0">
         <div className="absolute top-20 right-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl" />

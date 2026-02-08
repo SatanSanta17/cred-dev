@@ -54,32 +54,32 @@ export function Footer() {
               <p className="text-gray-400 mb-4 max-w-md">
                 The credibility layer for developers. Verify skills, build trust, and get discovered.
               </p>
-              <div className="flex gap-4">
-                <a 
-                  href="https://github.com" 
-                  target="_blank" 
+              {/* <div className="flex gap-4">
+                <a
+                  href="https://github.com"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
                 >
                   <Github className="w-5 h-5" />
                 </a>
-                <a 
-                  href="https://twitter.com" 
-                  target="_blank" 
+                <a
+                  href="https://twitter.com"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
                 >
                   <Twitter className="w-5 h-5" />
                 </a>
-                <a 
-                  href="https://linkedin.com" 
-                  target="_blank" 
+                <a
+                  href="https://linkedin.com"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
                 >
                   <Linkedin className="w-5 h-5" />
                 </a>
-              </div>
+              </div> */}
             </div>
 
             {/* Product */}
@@ -91,21 +91,21 @@ export function Footer() {
                     How It Works
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
                     Pricing
                   </a>
-                </li>
+                </li> */}
                 <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
+                  <a href="#sample-output" className="text-gray-400 hover:text-white transition-colors">
                     Features
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
                     Roadmap
                   </a>
-                </li>
+                </li> */}
               </ul>
             </div>
 
@@ -114,11 +114,11 @@ export function Footer() {
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
+                  <a href="/about" className="text-gray-400 hover:text-white transition-colors">
                     About
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
                     Blog
                   </a>
@@ -127,9 +127,9 @@ export function Footer() {
                   <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
                     Careers
                   </a>
-                </li>
+                </li> */}
                 <li>
-                  <a href="mailto:hello@creddev.com" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                  <a href="mailto:burhanuddinchital25151@gmail.com" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
                     <Mail className="w-4 h-4" />
                     Contact
                   </a>
@@ -143,7 +143,7 @@ export function Footer() {
             <p className="text-gray-500 text-sm">
               © {currentYear} CredDev. All rights reserved.
             </p>
-            <div className="flex gap-6 text-sm">
+            {/* <div className="flex gap-6 text-sm">
               <a href="#" className="text-gray-500 hover:text-white transition-colors">
                 Privacy Policy
               </a>
@@ -153,7 +153,7 @@ export function Footer() {
               <a href="#" className="text-gray-500 hover:text-white transition-colors">
                 Cookie Policy
               </a>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
