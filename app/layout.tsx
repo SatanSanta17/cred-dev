@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     description: "Verify skills. Build trust. Get discovered.",
     type: "website",
   },
+  icons: {
+    icon: '/meta-icon.png',
+  },
 };
 
 export default function RootLayout({
