@@ -13,13 +13,12 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { Loader2, CheckCircle2, Code2, Target } from 'lucide-react'
-
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   userType: z.enum(['developer', 'recruiter']),
   githubProfile: z.string().optional(),
   organization: z.string().optional(),
-  willingToConnect: z.boolean().default(false),
+  willingToConnect: z.boolean(),  // ✅ Simply boolean, no optional/default
 })
 
 type FormData = z.infer<typeof formSchema>
