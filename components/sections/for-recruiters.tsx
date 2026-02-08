@@ -11,21 +11,21 @@ const benefits = [
     icon: Search,
     title: "Find Verified Talent",
     description: "Stop guessing. Access developers with verified GitHub, LeetCode, and LinkedIn credentials.",
-    stat: "90% faster",
+    stat: "Faster screening",
     gradient: "from-blue-500 to-cyan-500"
   },
   {
     icon: Filter,
     title: "Filter by Real Skills",
     description: "Search by actual skill scores, not just keywords. Find backend, frontend, or ML engineers easily.",
-    stat: "10x accurate",
+    stat: "More accurate",
     gradient: "from-cyan-500 to-green-500"
   },
   {
     icon: Clock,
     title: "Reduce Hiring Time",
     description: "No more manual profile checks. Get instant credibility insights on every developer.",
-    stat: "Save 20+ hrs",
+    stat: "Save hours",
     gradient: "from-green-500 to-emerald-500"
   },
   {
@@ -46,7 +46,7 @@ const benefits = [
     icon: Zap,
     title: "Faster Shortlisting",
     description: "Instantly identify top candidates with CredDev's ranking system and role-fit analysis.",
-    stat: "3x efficiency",
+    stat: "More efficient",
     gradient: "from-blue-500 to-purple-500"
   }
 ]
