@@ -19,10 +19,10 @@ export default function Home() {
       <Trust />
       <WhyNow />
       <SampleOutput />
+      <WaitlistForm />
       <ForDevelopers />
       <ForRecruiters />
       <FounderNote />
-      <WaitlistForm />
       <Footer />
     </main>
   )

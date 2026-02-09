@@ -240,7 +240,7 @@ export default function AboutPage() {
                 We're growing! Join our team
             </p>
               {/* reachout via email or linkedin */}
-              <Link href="mailto:burhanuddinchital25151@gmail.com" className="text-purple-400 hover:text-purple-300"><span><Mail className="w-4 h-4" /></span></Link>
+              <Link href="mailto:cred.dev17@gmail.com" className="text-purple-400 hover:text-purple-300"><span><Mail className="w-4 h-4" /></span></Link>
               <Link href="https://www.linkedin.com/in/cburhanuddin/" className="text-purple-400 hover:text-purple-300"><span><Linkedin className="w-4 h-4" /></span></Link>
             </div>
           </motion.div>
