@@ -41,29 +41,27 @@ export function FounderNote() {
             {/* Background decoration */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl" />
-            
             <div className="relative z-10 space-y-4 text-gray-300 text-lg leading-relaxed">
               <p>
                 We're building CredDev as a collaboration between a software developer and an HR professional who have both experienced the hiring gap firsthand.
               </p>
-              
+
               <p>
-                From the developer side, it's frustrating when real skills are hard to showcase beyond resumes and scattered profiles.
-                From the recruiter side, it's just as difficult to reliably identify strong talent among thousands of applicants.
+                From the developer side, it's frustrating when real skills are hard to showcase beyond resumes and scattered profiles across platforms like GitHub, coding sites, and professional networks. From the recruiter side, it's just as difficult to reliably identify strong talent when these signals are fragmented and spread across the internet, with no single, trustworthy view of a candidate.
               </p>
-              
+
               <p className="font-medium text-white">
                 We realized this isn't a one-sided problem — it's a disconnect.
               </p>
-              
+
               <p>
-                Developers and recruiters ultimately want the same thing: clarity, trust, and the ability to recognize real potential. Yet the current system keeps them apart.
+                Developers and recruiters ultimately want the same thing: clarity, trust, and the ability to recognize real potential. Yet the current system keeps them apart, with skills scattered, visibility limited, and evaluation often reduced to incomplete signals like resumes or past credentials.
               </p>
-              
+
               <p>
-                CredDev is our attempt to bring them closer — to create a shared layer of credibility where skills are visible, signals are trustworthy, and hiring becomes more human and evidence-driven.
+                CredDev is our attempt to bring them closer — to create a shared layer of credibility where skills from across platforms come together, signals become trustworthy, and hiring becomes more human and evidence-driven.
               </p>
-              
+
               <p className="text-purple-300 font-semibold italic pt-4">
                 — Built by a developer and a recruiter, for both sides of the table.
               </p>
