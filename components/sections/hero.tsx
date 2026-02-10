@@ -8,6 +8,41 @@ import { FloatingCard } from '@/components/shared/floating-card'
 import { WaitlistCount } from '@/components/shared/waitlist-count'
 
 export function Hero() {
+  const CREDDEV_METRICS = [
+    {
+      id: 'problem-solving',
+      icon: Code2,
+      iconColor: 'text-green-400',
+      label: 'Problem Solving',
+      // rank: 'Top 12%',
+      gradientFrom: 'from-green-400',
+      gradientTo: 'to-emerald-600',
+      source: 'LeetCode Analysis',
+      delay: 0.9
+    },
+    {
+      id: 'engineering',
+      icon: Github,
+      iconColor: 'text-blue-400',
+      label: 'Engineering',
+      // rank: 'Top 20%',
+      gradientFrom: 'from-blue-400',
+      gradientTo: 'to-cyan-600',
+      source: 'GitHub Contributions',
+      delay: 1.0
+    },
+    {
+      id: 'consistency',
+      icon: Award,
+      iconColor: 'text-purple-400',
+      label: 'Consistency',
+      // rank: 'Top 8%',
+      gradientFrom: 'from-purple-400',
+      gradientTo: 'to-pink-600',
+      source: 'Activity Score',
+      delay: 1.1
+    }
+  ]
   const scrollToWaitlist = () => {
     document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -114,50 +149,29 @@ export function Hero() {
           </motion.div>
 
           {/* Floating Cards Preview */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto px-4 mb-8"
           >
-            <FloatingCard delay={0.9}>
-              <div className="text-left">
-                <div className="flex items-center gap-2 mb-3">
-                  <Code2 className="w-5 h-5 text-green-400" />
-                  <div className="text-sm text-gray-400">Problem Solving</div>
-                </div>
-                <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600">
-                  Top 12%
-                </div>
-                <div className="text-xs text-gray-500 mt-2">LeetCode Analysis</div>
-              </div>
-            </FloatingCard>
-            
-            <FloatingCard delay={1.0}>
-              <div className="text-left">
-                <div className="flex items-center gap-2 mb-3">
-                  <Github className="w-5 h-5 text-blue-400" />
-                  <div className="text-sm text-gray-400">Engineering</div>
-                </div>
-                <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-600">
-                  Top 20%
-                </div>
-                <div className="text-xs text-gray-500 mt-2">GitHub Contributions</div>
-              </div>
-            </FloatingCard>
-            
-            <FloatingCard delay={1.1}>
-              <div className="text-left">
-                <div className="flex items-center gap-2 mb-3">
-                  <Award className="w-5 h-5 text-purple-400" />
-                  <div className="text-sm text-gray-400">Consistency</div>
-                </div>
-                <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-                  Top 8%
-                </div>
-                <div className="text-xs text-gray-500 mt-2">Activity Score</div>
-              </div>
-            </FloatingCard>
+            {CREDDEV_METRICS.map((metric) => {
+              const Icon = metric.icon
+              return (
+                <FloatingCard key={metric.id} delay={metric.delay}>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon className={`w-5 h-5 ${metric.iconColor}`} />
+                      <div className="text-sm text-gray-400">{metric.label}</div>
+                    </div>
+                    {/* <div className={`text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${metric.gradientFrom} ${metric.gradientTo}`}>
+                      {metric.rank}
+                    </div> */}
+                    <div className="text-xs text-gray-500 mt-2">{metric.source}</div>
+                  </div>
+                </FloatingCard>
+              )
+            })}
           </motion.div>
         </motion.div>
       </div>
