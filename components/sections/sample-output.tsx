@@ -4,8 +4,9 @@ import { motion } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Share2, TrendingUp, Award, Github, Code2, Target } from 'lucide-react'
+import { Share2, TrendingUp, Award, Github, Code2, Target, ExternalLink } from 'lucide-react'
 import CountUp from 'react-countup'
+import Link from 'next/link'
 
 const sampleScores = [
   { label: "Problem Solving", value: 88, percentile: 12, icon: Code2, color: "from-green-400 to-emerald-600" },
@@ -42,8 +43,21 @@ export function SampleOutput() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 px-4">
             Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">CredDev Score</span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto px-4">
+          <p className="text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto px-4 mb-6">
             Get a detailed credibility report that showcases your real skills
+          </p>
+          <Link href="/report/Burhanuddin" target="_blank">
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="border-purple-500/50 hover:bg-purple-500/10 text-purple-400 hover:text-purple-300 transition-all gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Real Sample Report
+            </Button>
+          </Link>
+          <p className="text-sm text-gray-500 mt-3">
+            See founder Burhanuddin's actual CredDev report
           </p>
         </motion.div>
 
@@ -158,21 +172,30 @@ export function SampleOutput() {
                   ))}
                 </div>
 
-                {/* Share Button */}
+                {/* View Full Report Button */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.9 }}
-                  className="flex justify-center"
+                  className="flex justify-center gap-4"
                 >
+                  <Link href="/report/Burhanuddin" target="_blank">
+                    <Button 
+                      size="lg" 
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Full Sample Report
+                    </Button>
+                  </Link>
                   <Button 
                     size="lg" 
                     variant="outline" 
                     className="border-slate-700 hover:bg-slate-800 gap-2"
                   >
                     <Share2 className="w-4 h-4" />
-                    Share Your CredDev Profile
+                    Share Profile
                   </Button>
                 </motion.div>
               </div>

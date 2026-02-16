@@ -2,10 +2,11 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles, Github, Code2, Award } from 'lucide-react'
+import { ArrowRight, Sparkles, Github, Code2, Award, ExternalLink } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
 import { FloatingCard } from '@/components/shared/floating-card'
 import { WaitlistCount } from '@/components/shared/waitlist-count'
+import Link from 'next/link'
 
 export function Hero() {
   const CREDDEV_METRICS = [
@@ -134,17 +135,19 @@ export function Hero() {
                 Join Waitlist
                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-lg px-8 py-6 h-auto border-gray-700 hover:bg-gray-800"
-              >
-                Learn More
-              </Button>
+              <Link href="/report/Burhanuddin" target="_blank">
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="text-lg px-8 py-6 h-auto border-gray-700 hover:bg-gray-800 gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View Sample Report
+                </Button>
+              </Link>
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              First 500 developers get early access to their CredDev Score
+              First 500 developers get early access • See a real example report
             </p>
           </motion.div>
 
