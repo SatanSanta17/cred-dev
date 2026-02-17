@@ -1,68 +1,157 @@
-# 🚀 CredDev - The Credibility Layer for Developers
+# 🔍 CredDev - The Fact-Checking Layer for Developer Credibility
 
-A futuristic, unicorn-level landing page for CredDev - the platform that verifies developer skills and builds trust between developers and recruiters.
+**Verify skills. Detect fraud. Build trust.**
 
 ![CredDev](https://img.shields.io/badge/Status-Pre--Launch-purple)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8)
 
+---
+
 ## 🎯 What is CredDev?
 
-CredDev aggregates signals from **GitHub**, **LeetCode**, and **LinkedIn** to create a unified developer credibility score. Think of it as the "credit score" for developers.
+CredDev is a **developer credibility verification platform** that analyzes multi-platform signals to create fact-based, transparent reports. We are NOT a branding layer—we're a fact-checking layer.
 
-### For Developers
-- ✅ Prove real skills beyond resumes
-- 📊 Get verified rankings (Top X%)
-- 🎯 Role-fit analysis (Backend/Frontend/ML)
-- 🔗 Shareable credibility profile
-- 📈 Track growth over time
+### Our Core Philosophy
 
-### For Recruiters
-- ⚡ 90% faster candidate screening
-- 🎯 Filter by verified skill scores
-- ✅ 100% verified developer profiles
-- 📊 Deep skill insights
-- 🚀 Better hiring decisions
+```
+✅ WE ARE:
+• A fact-checking layer that verifies developer claims
+• An objective assessment platform that presents data neutrally
+• A credibility verification service that distinguishes truth from claims
+
+❌ WE ARE NOT:
+• A branding or marketing layer that sells candidates
+• An assumption-making service that fills gaps with guesses
+• A promotional platform that inflates achievements
+```
+
+### Three-Tier Verification System
+
+Every piece of information is classified into:
+
+1. **✅ VERIFIED:** Independently confirmed through public sources
+2. **🟡 PLAUSIBLE:** Aligns with context but cannot be independently confirmed
+3. **⚠️ CLAIMED:** Specific metrics/achievements that cannot be verified
+
+---
+
+## 📊 What We Analyze
+
+### Data Sources
+- **GitHub**: Public repos, commit history, code quality, contribution patterns
+- **LeetCode**: Problems solved, acceptance rate, contest rating, consistency
+- **LinkedIn**: Employment history, network, endorsements, profile completeness
+- **Resume**: Cross-platform consistency, timeline verification, claim validation
+
+### What We Detect
+
+**✅ Authenticity Signals:**
+- Consistent timelines across platforms
+- Natural progression patterns
+- Verified projects and contributions
+- Genuine skill demonstrations
+
+**🚨 Red Flags:**
+- Resume-LinkedIn inconsistencies
+- Timeline fraud (experience vs. activity)
+- Bulk commit patterns / copy-paste syndrome
+- Ghost developer (no code evidence)
+- Skill inflation / title mismatches
+- Unverified leadership claims
+
+---
+
+## 📋 Report Types (Layered System)
+
+### Layer 1: Extensive Report
+**Purpose:** Deep-dive analysis for internal assessment  
+**Length:** 1200-1800 lines  
+**Audience:** Internal hiring teams, detailed evaluation  
+**Contains:** Full analysis, interview strategies, growth recommendations, prescriptive advice
+
+### Layer 2: Overview Report
+**Purpose:** Concise hiring decision summary  
+**Length:** 300-500 lines (1-2 pages)  
+**Audience:** Hiring managers, senior recruiters  
+**Contains:** Executive summary, key findings, credibility breakdown, hiring recommendation
+
+### Layer 3: Snapshot Report
+**Purpose:** At-a-glance decision-making  
+**Length:** 150-200 lines (1 page)  
+**Audience:** Recruiters, first-line screeners  
+**Contains:** ONLY facts + market positioning, NO advice/tactics/process  
+**Critical Rule:** Information provider, NOT consultant
+
+---
 
 ## 🛠 Tech Stack
 
+### Frontend
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
-- **UI Components**: shadcn/ui
+- **UI Components**: shadcn/ui + Radix UI
 - **Animations**: Framer Motion
+
+### Backend (Planned)
 - **Database**: Supabase (PostgreSQL)
+- **APIs**: GitHub API, LeetCode scraping, LinkedIn (planned)
+- **Analysis**: Custom scoring algorithms
+- **AI**: LLM-assisted report generation (GPT-4)
+
+### Infrastructure
 - **Hosting**: Vercel
 - **Form Validation**: React Hook Form + Zod
+- **Analytics**: Vercel Analytics (planned)
+
+---
 
 ## 📁 Project Structure
 
 ```
 cred-dev/
 ├── app/
-│   ├── page.tsx              # Main landing page
-│   ├── layout.tsx            # Root layout with fonts
-│   └── globals.css           # Global styles + animations
+│   ├── page.tsx                    # Landing page
+│   ├── report/
+│   │   ├── Burhanuddin/
+│   │   │   └── page.tsx           # Sample report page
+│   │   └── [candidate]/
+│   │       └── page.tsx           # Dynamic report routes (planned)
+│   └── globals.css                 # Global styles
 ├── components/
 │   ├── sections/
-│   │   ├── hero.tsx          # Hero with animated gradient
-│   │   ├── problem.tsx       # Problem statement
-│   │   ├── how-it-works.tsx  # 3-step process
-│   │   ├── sample-output.tsx # Mock dashboard preview
+│   │   ├── hero.tsx               # Hero with CTA
+│   │   ├── problem.tsx            # Problem statement
+│   │   ├── how-it-works.tsx       # 3-step process
+│   │   ├── sample-output.tsx      # Report preview + CTA
 │   │   ├── for-developers.tsx
 │   │   ├── for-recruiters.tsx
-│   │   ├── waitlist-form.tsx # Supabase-connected form
+│   │   ├── waitlist-form.tsx      # Supabase-connected
 │   │   └── footer.tsx
-│   ├── shared/
-│   │   ├── gradient-text.tsx
-│   │   └── floating-card.tsx
-│   └── ui/                   # shadcn/ui components
+│   └── ui/                         # shadcn/ui components
+├── reports/                        # Report guidelines & samples
+│   ├── REPORT_GUIDELINES.md       # Comprehensive writing standards
+│   ├── REPORT_CHECKLIST.md        # Quick reference checklist
+│   ├── Pradeep/
+│   │   ├── Pradeep.txt            # Extensive report
+│   │   ├── Pradeep_Overview.md    # Overview report
+│   │   └── Pradeep_Snapshot.md    # Snapshot report
+│   ├── Burhanuddin/
+│   │   ├── Burhanuddin.txt
+│   │   ├── Burhanuddin_Overview.md
+│   │   └── Burhanuddin_Snapshot.md
+│   └── Gauri/
+│       ├── Gauri.txt
+│       └── Gauri_Snapshot.md
 ├── lib/
-│   ├── supabase.ts          # Supabase client
-│   └── utils.ts             # Utility functions
-└── public/                  # Static assets
+│   ├── supabase.ts                # Supabase client
+│   └── utils.ts                   # Utility functions
+└── public/                        # Static assets
 ```
+
+---
 
 ## 🚀 Getting Started
 
@@ -126,6 +215,111 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000) 🎉
 
+---
+
+## 📖 Report Writing Standards
+
+### Key Guidelines
+
+All reports must follow the principles in `/reports/REPORT_GUIDELINES.md`:
+
+1. **Three-Tier Verification**: VERIFIED → PLAUSIBLE → CLAIMED
+2. **Neutral Language**: Avoid promotional words without proof
+3. **Clear Disclaimers**: State limitations and unverified claims
+4. **No Assumptions**: If data is missing, state "data not found"
+5. **Cross-Platform Consistency**: Check for discrepancies
+
+### Language Standards
+
+**❌ AVOID (Without Proof):**
+- Expertise, Specialization, Mastery
+- Elite, Exceptional, Outstanding (without benchmarking)
+- "Proven track record", "Deep understanding"
+
+**✅ USE INSTEAD:**
+- Experience, Work, Exposure
+- Above average, Strong (with data)
+- "Based on [data source]", "Verified via [platform]"
+
+### Report Checklist
+
+Before finalizing any report, verify:
+- [ ] All metrics marked as VERIFIED, PLAUSIBLE, or CLAIMED
+- [ ] Disclaimers added for unverified claims
+- [ ] Cross-platform inconsistencies documented
+- [ ] No assumptions made (state "data not found" instead)
+- [ ] Neutral language used throughout
+- [ ] Scam detection analysis completed
+- [ ] Layer-appropriate content (Extensive vs Overview vs Snapshot)
+
+**See `/reports/REPORT_CHECKLIST.md` for detailed checklist.**
+
+---
+
+## 🎯 For Developers
+
+### What You Get
+- ✅ Fact-based credibility report (not a sales pitch)
+- 📊 Verified rankings with market positioning
+- 🎯 Role-fit analysis based on actual data
+- 🔗 Shareable profile with transparency
+- ⚠️ Honest assessment of strengths + weaknesses
+
+### What We DON'T Do
+- ❌ Inflate your achievements
+- ❌ Make assumptions about your skills
+- ❌ Hide your weaknesses
+- ❌ Brand you as something you're not
+
+**We show recruiters the TRUTH about your profile—verified, plausible, or claimed.**
+
+---
+
+## 🎯 For Recruiters
+
+### What You Get
+- ⚡ 90% faster candidate screening
+- ✅ Cross-platform verification (GitHub + LeetCode + LinkedIn)
+- 🚨 Fraud detection and red flags
+- 📊 Fact-based skill assessment
+- 🎯 Three report layers (Extensive, Overview, Snapshot)
+
+### What We DON'T Do
+- ❌ Tell you who to hire (you decide)
+- ❌ Give interview tactics (you design your process)
+- ❌ Recommend compensation (you set the offer)
+- ❌ Prescribe hiring steps (you follow your workflow)
+
+**We provide FACTS and market positioning—you make the decision.**
+
+---
+
+## 🔍 Sample Reports
+
+### Available Examples
+
+1. **Pradeep N C** (Backend Developer, 2+ YOE)
+   - Extensive: `/reports/Pradeep/Pradeep.txt`
+   - Overview: `/reports/Pradeep/Pradeep_Overview.md`
+   - Snapshot: `/reports/Pradeep/Pradeep_Snapshot.md`
+
+2. **Burhanuddin Chitalwala** (Full-Stack Developer, 1.5+ YOE)
+   - Extensive: `/reports/Burhanuddin/Burhanuddin.txt`
+   - Overview: `/reports/Burhanuddin/Burhanuddin_Overview.md`
+   - Snapshot: `/reports/Burhanuddin/Burhanuddin_Snapshot.md`
+   - Live Page: `/app/report/Burhanuddin/page.tsx`
+
+3. **Sri Gauri Pandey** (Student/Fresher, Multiple Discrepancies)
+   - Extensive: `/reports/Gauri/Gauri.txt`
+   - Snapshot: `/reports/Gauri/Gauri_Snapshot.md`
+   - **Case Study:** Elite LeetCode performance with resume-LinkedIn inconsistencies
+
+### View Live Sample
+
+Visit the deployed site and click **"View Sample Report"** to see Burhanuddin's full report in action.
+
+---
+
 ## 🌐 Deploy to Vercel
 
 ### Option 1: With Supabase Integration (Recommended)
@@ -147,82 +341,7 @@ vercel
 
 Add environment variables in Vercel dashboard under **Settings → Environment Variables**.
 
-## 🎨 Design Features
-
-### Visual Elements
-- 🌈 Animated gradient backgrounds
-- ✨ Glassmorphism effects
-- 🎭 3D floating cards with tilt
-- 🌊 Smooth scroll animations
-- 💫 Particle effects background
-- 🎯 Interactive hover states
-
-### Animations
-- Framer Motion for smooth transitions
-- CountUp for animated numbers
-- Blob animations for background orbs
-- Scroll-triggered reveals
-- Micro-interactions on all interactive elements
-
-### Color Palette
-- **Primary**: Purple (#a855f7) → Blue (#3b82f6) → Cyan (#06b6d4)
-- **Background**: Black → Slate-900
-- **Accents**: Green (success), Red (errors)
-
-## 📊 Supabase Database Schema
-
-```typescript
-type WaitlistEntry = {
-  id: string                    // UUID
-  email: string                 // Unique email
-  user_type: 'developer' | 'recruiter'
-  github_profile: string | null // Optional GitHub URL
-  organization: string | null   // College/Company
-  willing_to_connect: boolean   // GitHub connection consent
-  created_at: string           // Timestamp
-}
-```
-
-## 🔧 Customization
-
-### Change Colors
-
-Edit `app/globals.css` - search for gradient classes:
-```css
-from-purple-500 to-blue-500  /* Change these */
-```
-
-### Modify Sections
-
-Each section is in `components/sections/` - fully modular and independent.
-
-### Update Copy
-
-Search for text in section files and update as needed.
-
-## 📈 Analytics (Optional)
-
-Add Vercel Analytics:
-
-```bash
-npm install @vercel/analytics
-```
-
-In `app/layout.tsx`:
-```typescript
-import { Analytics } from '@vercel/analytics/react'
-
-export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        {children}
-        <Analytics />
-      </body>
-    </html>
-  )
-}
-```
+---
 
 ## 🐛 Troubleshooting
 
@@ -236,49 +355,81 @@ export default function RootLayout({ children }) {
 - Verify Row Level Security policies are set
 - Check browser console for errors
 
-### Animations not working
-- Ensure `framer-motion` is installed: `npm install framer-motion`
-- Check browser console for React errors
+### Report pages not rendering
+- Ensure all UI components are installed (`npm install`)
+- Check for missing imports in component files
+- Verify `@radix-ui/react-progress` is installed
 
-## 🚦 Development Checklist
+---
 
-- [x] Next.js setup with TypeScript
-- [x] Tailwind CSS v4 configuration
-- [x] shadcn/ui components installed
-- [x] Supabase client configured
-- [x] Hero section with animations
-- [x] Problem statement section
-- [x] How It Works (3-step process)
-- [x] Sample Output preview
-- [x] For Developers benefits
-- [x] For Recruiters benefits
-- [x] Waitlist form with validation
-- [x] Footer with CTA
-- [x] Responsive design
-- [x] Smooth scroll navigation
-- [x] Toast notifications
-- [ ] Add custom domain
-- [ ] Add analytics
-- [ ] Add SEO metadata
-- [ ] Create OpenGraph images
-- [ ] Setup email notifications
+## 📈 Roadmap
 
-## 📝 Next Steps (Post-Launch)
+### Phase 1: Pre-Launch (Current)
+- [x] Landing page with waitlist
+- [x] Sample report pages (Burhanuddin)
+- [x] Report writing guidelines & checklists
+- [x] 3-layer reporting system defined
+- [x] Fact-checking philosophy established
+- [ ] Custom domain setup
+- [ ] SEO optimization
 
-1. **Build MVP**: Implement GitHub/LeetCode/LinkedIn analysis
-2. **Create Dashboard**: Developer credibility dashboard
-3. **Recruiter Portal**: Search and filter verified developers
-4. **Email System**: Automated waitlist notifications
-5. **Analytics Dashboard**: Track signups and engagement
-6. **Blog**: Content marketing for SEO
+### Phase 2: MVP (Q2 2026)
+- [ ] GitHub API integration
+- [ ] LeetCode scraping automation
+- [ ] LinkedIn data collection (via consent)
+- [ ] Automated report generation
+- [ ] Developer dashboard
+- [ ] Recruiter portal (search & filter)
+
+### Phase 3: Scale (Q3 2026)
+- [ ] AI-assisted analysis (LLM integration)
+- [ ] Fraud detection algorithms
+- [ ] Batch processing for companies
+- [ ] Email notification system
+- [ ] Analytics dashboard
+- [ ] API for enterprise clients
+
+### Phase 4: Monetization (Q4 2026)
+- [ ] Freemium model for developers
+- [ ] Recruiter subscription tiers
+- [ ] Enterprise API pricing
+- [ ] White-label solutions
+
+---
+
+## 🧪 Testing Philosophy
+
+### What We Test
+- Cross-platform data consistency
+- Timeline verification
+- Scam pattern detection
+- Red flag identification
+- Claim vs. reality alignment
+
+### What We DON'T Test
+- Coding skills directly (we analyze public work)
+- Soft skills / culture fit
+- Real-time problem-solving (we look at history)
+
+**Note:** We recommend live coding tests for final validation (as stated in our reports).
+
+---
 
 ## 🤝 Contributing
 
-This is a pre-launch project. For suggestions or issues, reach out to the team.
+This is a pre-launch project. For suggestions or issues:
+1. Review `/reports/REPORT_GUIDELINES.md` for our philosophy
+2. Check `/reports/REPORT_CHECKLIST.md` for standards
+3. Submit issues with detailed context
+4. Follow our fact-checking principles in PRs
+
+---
 
 ## 📄 License
 
 Private project - All rights reserved.
+
+---
 
 ## 🙏 Credits
 
@@ -290,6 +441,24 @@ Private project - All rights reserved.
 
 ---
 
+## 🎓 Learn More
+
+### Key Documents
+- **Report Guidelines**: `/reports/REPORT_GUIDELINES.md` (755 lines)
+- **Report Checklist**: `/reports/REPORT_CHECKLIST.md` (393 lines)
+- **Sample Reports**: `/reports/[Pradeep|Burhanuddin|Gauri]/`
+
+### Philosophy Resources
+Read our sample reports to understand:
+- How we distinguish VERIFIED vs CLAIMED data
+- How we handle discrepancies (see Gauri's report)
+- How we avoid promotional language
+- How we provide market positioning without prescriptive advice
+
+---
+
 **Made with 💜 by the CredDev team**
 
-*Verify skills. Build trust. Get discovered.*
+*"We don't sell candidates. We verify them."*
+
+**Verify skills. Detect fraud. Build trust.**

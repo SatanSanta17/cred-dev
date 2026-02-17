@@ -4,6 +4,22 @@
 
 ---
 
+## 📊 CHOOSE YOUR LAYER
+
+Before starting, identify which report layer you're creating:
+
+- **Extensive Report** → Use Checklist A (most comprehensive)
+- **Overview Report** → Use Checklist B (hiring manager focused)
+- **Snapshot Report** → Use Checklist C (recruiter screening)
+
+---
+
+# 🔷 UNIVERSAL CHECKLIST (ALL LAYERS)
+
+**These apply to EVERY report regardless of layer**
+
+---
+
 ## ⚡ Quick Verification Checklist
 
 ### 1️⃣ LANGUAGE AUDIT (30 seconds)
@@ -165,4 +181,212 @@ If answer is NO to any → **REVISE**
 ---
 
 **Quick Reference Version 1.0**  
-**Use with:** [Full REPORT_GUIDELINES.md](/REPORT_GUIDELINES.md)
+**Use with:** [Full REPORT_GUIDELINES.md](/reports/REPORT_GUIDELINES.md)
+
+---
+
+# 🔷 CHECKLIST A: EXTENSIVE REPORT
+
+**For:** Tech leads, deep technical vetting  
+**Length:** 1000-1200 lines  
+**Time to write:** 3-4 hours
+
+---
+
+## A1. Content Requirements
+
+### Must Include:
+- [ ] Complete platform-by-platform analysis (GitHub, LeetCode, LinkedIn, Resume)
+- [ ] Detailed work project assessment with credibility ratings
+- [ ] Developer growth recommendations (actionable, specific)
+- [ ] Interview focus areas with sample questions
+- [ ] Compensation insights (market rates, positioning)
+- [ ] Future trajectory predictions (scenario-based)
+- [ ] Benchmarking tables (vs cohort, percentiles)
+- [ ] Next steps and action items for recruiters
+
+### Platform Analysis Depth:
+- [ ] GitHub: Every repo reviewed, code quality assessed, commit patterns analyzed
+- [ ] LeetCode: Year-by-year breakdown, topic distribution, activity patterns
+- [ ] LinkedIn: Company verification with funding/revenue data
+- [ ] Resume: Line-by-line claim verification
+
+### Can Be Prescriptive:
+- [ ] Suggest specific interview questions
+- [ ] Recommend salary ranges
+- [ ] Advise on preparation timeline
+- [ ] Provide hiring process recommendations
+
+---
+
+## A2. Extensive Report Structure Check
+
+- [ ] Header with complete metadata
+- [ ] Executive summary (comprehensive)
+- [ ] Score breakdown with detailed justification
+- [ ] Platform analysis (all platforms, full detail)
+- [ ] Cross-platform consistency analysis
+- [ ] Work project deep-dives
+- [ ] Benchmarking section
+- [ ] Growth recommendations
+- [ ] Interview preparation guide
+- [ ] Compensation analysis
+- [ ] Future trajectory section
+- [ ] Recruiter recommendations
+
+---
+
+# 🔷 CHECKLIST B: OVERVIEW REPORT
+
+**For:** Hiring managers, recruiters (decision-making)  
+**Length:** 300-400 lines (1-2 pages)  
+**Time to write:** 1-2 hours
+
+---
+
+## B1. Content Requirements
+
+### Must Include:
+- [ ] Executive summary (3-4 sentences, factual)
+- [ ] "What We Verified" section (clear, specific)
+- [ ] Key strengths (3-5 verified facts)
+- [ ] Key concerns (3-5 verified issues)
+- [ ] Role fit assessment (specific roles)
+- [ ] Interview readiness by company type
+- [ ] Hiring recommendation with confidence level
+- [ ] Market value indicators (factual positioning)
+
+### Must Exclude:
+- [ ] ❌ No repetitive platform details (already in extensive)
+- [ ] ❌ No granular metrics (keep high-level)
+- [ ] ❌ No developer growth plans (not hiring manager focus)
+- [ ] ❌ No detailed benchmarking tables
+
+### Verification Clarity:
+- [ ] Clear distinction: Verified vs Claimed
+- [ ] Disclaimers for all unverified metrics
+- [ ] Cross-platform consistency summary
+- [ ] Red flags clearly called out (if any)
+
+---
+
+## B2. Overview Report Structure Check
+
+- [ ] Header with key metadata
+- [ ] Quick summary (hiring decision focus)
+- [ ] What we verified section
+- [ ] Employment history (with verification status)
+- [ ] Education (with verification status)
+- [ ] Technical skills breakdown
+- [ ] Key strengths section (3-5 points)
+- [ ] Key concerns section (3-5 points)
+- [ ] Interview readiness assessment
+- [ ] Hiring recommendation
+- [ ] Important notes/disclaimers footer
+
+---
+
+# 🔷 CHECKLIST C: SNAPSHOT REPORT
+
+**For:** Recruiters (initial screening, 60-second read)  
+**Length:** 200-250 lines  
+**Time to write:** 45-60 minutes
+
+---
+
+## C1. Content Requirements (Facts Only)
+
+### Must Include:
+- [ ] At-a-glance score + percentile
+- [ ] Visual indicators (🟢🟡🔴 for quick scanning)
+- [ ] Technical skills verification status
+- [ ] Interview readiness by company type (factual)
+- [ ] Reliability signals (authenticity, work ethic, depth)
+- [ ] Key strengths (3-5 verified facts)
+- [ ] Key concerns (3-5 verified gaps)
+- [ ] Profile characteristics (factual list)
+- [ ] Market positioning comparison (vs cohort)
+- [ ] Red/green flags to watch (factual observations)
+
+### CRITICAL: Must Exclude
+- [ ] ❌ No compensation recommendations (salary ranges, offers)
+- [ ] ❌ No "red flag if asking X amount"
+- [ ] ❌ No interview tactics (question lists, what to probe)
+- [ ] ❌ No process prescriptions (next steps, workflow)
+- [ ] ❌ No "when to hire/pass" advice
+- [ ] ❌ No "you need X to make this work"
+- [ ] ❌ No "choose this candidate if..."
+- [ ] ❌ No repeated insights
+
+### Tone Check:
+- [ ] Factual, not prescriptive
+- [ ] Neutral, not advisory
+- [ ] Informative, not directive
+- [ ] Shows data, doesn't tell what to do
+
+---
+
+## C2. Snapshot Report Structure Check
+
+- [ ] Header with quick metadata
+- [ ] Hiring decision summary box (score, confidence, risk)
+- [ ] At-a-glance metrics table
+- [ ] Key strengths (factual bullets)
+- [ ] Key concerns (factual bullets)
+- [ ] Reliability signals (data-based ratings)
+- [ ] Hiring parameters (interview readiness ONLY)
+- [ ] Market value indicators (NOT compensation advice)
+- [ ] Red/green flags (factual observations)
+- [ ] Comparative positioning (vs market average)
+- [ ] Profile characteristics (factual summary)
+
+---
+
+## C3. Snapshot-Specific Language Audit
+
+**Replace prescriptive language:**
+
+- [ ] "You should hire if..." → "Profile characteristics: [facts]"
+- [ ] "We recommend offering ₹X-Y" → "Market value indicators: [facts]"
+- [ ] "Ask these questions..." → Remove entirely
+- [ ] "Next steps: Schedule X rounds" → Remove entirely
+- [ ] "When to pass on candidate" → "Profile characteristics: [facts]"
+- [ ] "Red flag if asking ₹X" → Remove entirely
+- [ ] "You need senior engineers to mentor" → Remove entirely
+
+**Use factual statements:**
+
+- [ ] ✅ "2 years verified experience at Series A startup"
+- [ ] ✅ "LeetCode: 201 problems (Top 40-45% for experience level)"
+- [ ] ✅ "Backend-specialized (limited full-stack evidence)"
+- [ ] ✅ "Domain expertise: Above average (fintech is specialized)"
+
+---
+
+# 🔷 FINAL SIGN-OFF (ALL LAYERS)
+
+Before submitting ANY report:
+
+## Universal Checks:
+- [ ] All universal checklist items passed (language, verification, disclaimers)
+- [ ] Layer-appropriate content (included what should be, excluded what shouldn't)
+- [ ] Tone matches layer purpose
+- [ ] Length is within target range
+- [ ] No contradictions between sections
+
+## Layer Verification:
+- [ ] **Extensive:** Includes all deep-dive sections, can be prescriptive
+- [ ] **Overview:** Focused on hiring decision, no repetitive details
+- [ ] **Snapshot:** ONLY facts + market positioning, NO advice/tactics/process
+
+## Final Question:
+**"Does this report serve its intended audience appropriately?"**
+
+- Extensive → Tech lead gets complete analysis? ✅/❌
+- Overview → Hiring manager can make decision? ✅/❌
+- Snapshot → Recruiter can screen in 60 seconds? ✅/❌
+
+---
+
+**Quick Reference Version 2.0 (Layered)**  
+**Use with:** [Full REPORT_GUIDELINES.md](/reports/REPORT_GUIDELINES.md)

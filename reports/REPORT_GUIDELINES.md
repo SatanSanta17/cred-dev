@@ -528,6 +528,187 @@ foundation for 3 YOE but no exceptional markers that would place them in top
 
 ---
 
+## 📊 LAYERED REPORTING SYSTEM
+
+CredDev uses a **three-layer reporting structure** to serve different audiences and use cases:
+
+### Layer Overview
+
+| Layer | Audience | Length | Read Time | Purpose |
+|-------|----------|--------|-----------|---------|
+| **Extensive** | Tech leads, deep vetting | 1000-1200 lines | 15-20 min | Complete technical analysis |
+| **Overview** | Hiring managers, recruiters | 300-400 lines | 5-7 min | Hiring decision support |
+| **Snapshot** | Recruiters (initial screening) | 150-200 lines | 60-70 sec | Quick go/no-go assessment |
+
+---
+
+## 📋 LAYER 1: EXTENSIVE REPORT
+
+### Purpose
+Complete technical deep-dive for engineers, tech leads, and companies doing thorough vetting.
+
+### What to Include
+✅ **All Platform Analysis**
+- GitHub: Every repo detail, commit patterns, code quality assessment
+- LeetCode: Full problem breakdown, activity timeline, skill distribution
+- LinkedIn: Complete work history verification, company research
+- Resume: Line-by-line verification of every claim
+
+✅ **Detailed Sections**
+- Developer growth recommendations
+- Interview focus areas and sample questions
+- Compensation insights and market positioning
+- Future trajectory predictions
+- Benchmarking against cohort
+- Next steps and action items
+
+✅ **Can Be Prescriptive**
+- Suggest interview questions
+- Recommend preparation timeline
+- Advise on compensation ranges
+- Provide next steps checklist
+- Give process recommendations
+
+### Target Length
+1000-1200 lines
+
+### Tone
+Analytical, comprehensive, educational
+
+---
+
+## 📋 LAYER 2: OVERVIEW REPORT
+
+### Purpose
+Balanced report for hiring managers who need key information without overwhelming detail.
+
+### What to Include
+✅ **Curated Insights**
+- Executive summary (3-4 sentences)
+- Key strengths (3-5 major points)
+- Key concerns (3-5 major points)
+- Role fit assessment
+- Interview readiness by company type
+- Hiring recommendation with reasoning
+
+✅ **Verification Status**
+- Clear "WHAT WE VERIFIED" section
+- Distinguish: Verified facts vs Claimed metrics
+- Cross-platform consistency summary
+- Red flags (if any)
+
+✅ **Focused Analysis**
+- Platform summaries (not full details)
+- Most relevant technical skills
+- Notable achievements (verified or plausible)
+- Critical gaps or concerns
+
+### What to Exclude
+❌ Repetitive platform details (already in extensive)
+❌ Overly granular metrics
+❌ Developer growth plans (not hiring manager's focus)
+❌ Detailed benchmarking tables
+
+### Target Length
+300-400 lines (1-2 pages)
+
+### Tone
+Informative, decision-focused, balanced
+
+---
+
+## 📋 LAYER 3: SNAPSHOT REPORT
+
+### Purpose
+**60-second decision tool** for recruiters doing initial screening. Fact-check and market positioning ONLY.
+
+### Core Principle
+**WE ARE:** Information provider showing verified facts + market comparison
+**WE ARE NOT:** Process advisor, compensation consultant, or interview coach
+
+### What to Include
+✅ **At-a-Glance Metrics**
+- Overall score + percentile
+- Visual indicators (🟢🟡🔴 for quick scanning)
+- Technical skills: Verified status
+- Interview readiness by company type (factual assessment)
+- Years of experience (verified vs claimed)
+
+✅ **Reliability Signals**
+- Authenticity score (cross-platform consistency)
+- Work ethic indicators (verified activity patterns)
+- Technical depth (based on public evidence)
+
+✅ **Key Facts**
+- Strengths (3-5 verified facts)
+- Concerns (3-5 verified gaps/issues)
+- Profile characteristics (factual, not prescriptive)
+- Market positioning (compared to cohort)
+
+✅ **Red/Green Flags**
+- What to validate in interview (factual)
+- Positive signals to look for (factual)
+
+### What to EXCLUDE (Critical)
+❌ **No Compensation Advice**
+- No salary recommendations
+- No "offer range" suggestions
+- No "red flag if asking X amount"
+- No market rate guidance
+→ *Reason:* We're skill verifiers, not compensation consultants
+
+❌ **No Interview Tactics**
+- No "ask these questions" lists
+- No interview focus areas
+- No "what to probe" suggestions
+- No behavioral assessment tips
+→ *Reason:* Interviewers design their own process
+
+❌ **No Process Prescriptions**
+- No "next steps" checklists
+- No "schedule X rounds" advice
+- No reference check templates
+- No hiring workflow suggestions
+→ *Reason:* Companies have their own processes
+
+❌ **No Prescriptive Hiring Advice**
+- No "when to hire this candidate"
+- No "when to pass on this candidate"
+- No "you should choose X over Y"
+- No "you need Z to make this work"
+→ *Reason:* Recruiters make their own decisions
+
+### What to DO Instead
+✅ **State Facts + Market Position**
+```markdown
+PROFILE CHARACTERISTICS:
+✓ Fintech domain specialization (verified)
+✓ 2 years Java/Spring Boot experience (verified)
+✓ 201 LeetCode problems (Top 40-45% for this experience level)
+⚠️ Limited public code portfolio
+⚠️ DSA skills inactive since 2023 (93% activity drop)
+
+MARKET POSITIONING:
+• Domain expertise: Above average (fintech is specialized)
+• Backend skills: Average for 2 YOE
+• Problem-solving: Average for 2 YOE
+• Public presence: Below average
+```
+
+### Target Length
+150-200 lines (fits on 1-2 pages max try and keep the repition of insights minmal at this level)
+
+### Tone
+Factual, neutral, decision-focused (NOT prescriptive)
+
+### Visual Format
+- Heavy use of tables and indicators
+- Color-coded signals (🟢🟡🔴)
+- Clear section breaks
+- Scannable in 60-90 seconds
+
+---
+
 ## 🎯 Final Reminders
 
 ### Our Mission:
@@ -546,6 +727,11 @@ foundation for 3 YOE but no exceptional markers that would place them in top
 - ✅ **Use neutral language** instead of strong claims
 - ✅ **Add disclaimer** instead of presenting as fact
 - ✅ **Understate** rather than overstate
+
+### Layer-Specific Rule:
+- **Extensive:** Can be prescriptive (interview tips, compensation, process)
+- **Overview:** Balanced information (focused on hiring decision)
+- **Snapshot:** ONLY facts + market positioning (NO advice/tactics/process)
 
 ---
 
