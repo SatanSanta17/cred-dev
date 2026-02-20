@@ -1,12 +1,14 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
 from datetime import datetime
-from ..database import get_db, AnalysisJob
+from ..database import get_db, AnalysisJob, Report
 from services import AnalysisService
 
 router = APIRouter()
+
 
 @router.post("/analyze")
 async def start_analysis(
@@ -68,6 +70,7 @@ async def start_analysis(
         "message": "Skill Intelligence Engine analysis started. Check status at GET /analyze/{job_id}"
     }
 
+
 @router.get("/analyze/{job_id}")
 async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
     """
@@ -88,32 +91,24 @@ async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
     }
 
     if job.status == "completed":
-        # TODO: Fetch actual intelligence core and derived views from database
-        # For now, return placeholder structure
+        reports = db.query(Report).filter(Report.job_id == job_id).all()
+        report_map = {report.layer: report.content for report in reports}
+
+        def _decode(content: Optional[str]):
+            if not content:
+                return None
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                return {"content": content}
+
         response.update({
-            "intelligence_core": {
-                "capability_identity": "Generated capability identity",
-                "overall_score": 7.5,
-                "cross_domain_pattern": "Generated pattern analysis",
-                "green_signals": ["Signal 1", "Signal 2"],
-                "yellow_signals": ["Signal 3"],
-                "red_signals": []
-            },
+            "intelligence_core": _decode(report_map.get("intelligence_core")),
             "derived_views": {
-                "developer_insight": {
-                    "content": "Developer-focused insights...",
-                    "key_insights": ["Insight 1", "Insight 2"]
-                },
-                "recruiter_insight": {
-                    "content": "Recruiter-focused insights...",
-                    "key_insights": ["Assessment 1", "Assessment 2"]
-                }
+                "developer_insight": _decode(report_map.get("developer_insight")),
+                "recruiter_insight": _decode(report_map.get("recruiter_insight"))
             },
-            "credibility_card": {
-                "identity": "Card identity",
-                "score": 7.5,
-                "verified_signals": 5
-            }
+            "credibility_card": _decode(report_map.get("credibility_card"))
         })
 
     if job.error_message:
