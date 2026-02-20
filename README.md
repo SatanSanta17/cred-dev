@@ -2,10 +2,12 @@
 
 **Verify skills. Detect fraud. Build trust.**
 
-![CredDev](https://img.shields.io/badge/Status-Pre--Launch-purple)
+![CredDev](https://img.shields.io/badge/Status-MVP--Ready-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Tailwind](https://img.shields.io/badge/Tailwind-v4-38bdf8)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104.1-green)
+![Python](https://img.shields.io/badge/Python-3.11+-yellow)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-orange)
 
 ---
 
@@ -16,73 +18,120 @@ CredDev is a **developer credibility verification platform** that analyzes multi
 ### Our Core Philosophy
 
 ```
-✅ WE ARE:
-• A fact-checking layer that verifies developer claims
-• An objective assessment platform that presents data neutrally
-• A credibility verification service that distinguishes truth from claims
+✅ WE ANALYZE: Engineering capability, Problem-solving depth, Credibility signals, Execution patterns
+❌ WE IGNORE: Platform vanity metrics, Resume hype, Social media presence, Generic statistics
 
-❌ WE ARE NOT:
-• A branding or marketing layer that sells candidates
-• An assumption-making service that fills gaps with guesses
-• A promotional platform that inflates achievements
+✅ WE ARE: The Skill Intelligence Engine - Converting platform signals into capability insights
+❌ WE ARE NOT: A data aggregator, Resume checker, or Platform analyzer
 ```
 
-### Three-Tier Verification System
+### Intelligence Architecture
 
-Every piece of information is classified into:
+#### 🧠 **Intelligence Core (Primary Analysis)**
+- **Capability Identity**: One-sentence role positioning
+- **4-Domain Assessment**: Engineering, Problem Solving, Credibility, Execution
+- **VERIFIED/PLAUSIBLE/CLAIMED** claim classification
+- **Cross-domain pattern** recognition
 
-1. **✅ VERIFIED:** Independently confirmed through public sources
-2. **🟡 PLAUSIBLE:** Aligns with context but cannot be independently confirmed
-3. **⚠️ CLAIMED:** Specific metrics/achievements that cannot be verified
+#### 📊 **Derived Views (Stakeholder-Specific)**
+- **Developer Insight View**: Growth-focused guidance
+- **Recruiter Insight View**: Decision-oriented assessment
+- **Credibility Card**: Shareable professional positioning
+
+### Verification Framework
+
+Every claim is classified as:
+1. **✅ VERIFIED:** Observable evidence supports the claim
+2. **🟡 PLAUSIBLE:** Consistent with context but not fully verifiable
+3. **⚠️ CLAIMED:** Stated but lacking supporting evidence
 
 ---
 
-## 📊 What We Analyze
+## 🧠 What We Analyze
 
-### Data Sources
-- **GitHub**: Public repos, commit history, code quality, contribution patterns
-- **LeetCode**: Problems solved, acceptance rate, contest rating, consistency
-- **LinkedIn**: Employment history, network, endorsements, profile completeness
-- **Resume**: Cross-platform consistency, timeline verification, claim validation
+### Intelligence Domains (NOT Platforms)
 
-### What We Detect
+CredDev analyzes **capability** across four critical dimensions:
 
-**✅ Authenticity Signals:**
-- Consistent timelines across platforms
-- Natural progression patterns
-- Verified projects and contributions
-- Genuine skill demonstrations
+#### 🎯 **Domain 1: Engineering & Development**
+- Production system architecture
+- Code complexity and maturity
+- Deployment and DevOps awareness
+- System design patterns
 
-**🚨 Red Flags:**
-- Resume-LinkedIn inconsistencies
-- Timeline fraud (experience vs. activity)
-- Bulk commit patterns / copy-paste syndrome
-- Ghost developer (no code evidence)
-- Skill inflation / title mismatches
+#### 🧮 **Domain 2: Problem Solving & Algorithms**
+- Algorithmic thinking depth
+- Interview readiness assessment
+- Competitive programming analysis
+- Pattern recognition skills
+
+#### ✅ **Domain 3: Professional Credibility**
+- Claim verification across platforms
+- Timeline consistency validation
+- Skills authenticity assessment
+- Trustworthiness indicators
+
+#### ⚡ **Domain 4: Execution & Consistency**
+- Long-term engagement patterns
+- Learning velocity and discipline
+- Quality-over-quantity assessment
+- Professional consistency
+
+### Evidence Sources
+- **GitHub**: Engineering capability signals
+- **LeetCode**: Problem-solving demonstrations
+- **Resume**: Professional claim validation
+- **Cross-platform**: Consistency verification
+
+### Intelligence Signals
+
+**✅ Green Signals (Strengths):**
+- Production engineering evidence
+- Verified algorithmic capability
+- Consistent professional timeline
+- Disciplined execution patterns
+
+**🟡 Yellow Signals (Caution):**
+- Limited production experience
+- Inconsistent activity patterns
+- Unverified skill claims
+- Platform-specific gaps
+
+**🔴 Red Signals (Risks):**
+- Timeline inconsistencies
+- Bulk activity patterns
 - Unverified leadership claims
+- Credibility gaps
 
 ---
 
-## 📋 Report Types (Layered System)
+## 📋 Intelligence Outputs
 
-### Layer 1: Extensive Report
-**Purpose:** Deep-dive analysis for internal assessment  
-**Length:** 1200-1800 lines  
-**Audience:** Internal hiring teams, detailed evaluation  
-**Contains:** Full analysis, interview strategies, growth recommendations, prescriptive advice
+### 🧠 Intelligence Core (Primary Analysis)
+**Purpose:** Single source of truth for capability assessment
+**Content:** 4-domain analysis, capability identity, cross-domain patterns
+**Audience:** Internal processing (powers all other outputs)
+**Contains:** VERIFIED/PLAUSIBLE/CLAIMED claims, signal classification, scoring
 
-### Layer 2: Overview Report
-**Purpose:** Concise hiring decision summary  
-**Length:** 300-500 lines (1-2 pages)  
-**Audience:** Hiring managers, senior recruiters  
-**Contains:** Executive summary, key findings, credibility breakdown, hiring recommendation
+### 📊 Derived Views (Stakeholder-Specific)
 
-### Layer 3: Snapshot Report
-**Purpose:** At-a-glance decision-making  
-**Length:** 150-200 lines (1 page)  
-**Audience:** Recruiters, first-line screeners  
-**Contains:** ONLY facts + market positioning, NO advice/tactics/process  
-**Critical Rule:** Information provider, NOT consultant
+#### Developer Insight View
+**Purpose:** Growth and development guidance
+**Focus:** Career positioning, skill gaps, improvement trajectories
+**Tone:** Supportive, directional, actionable
+**Contains:** Role clarity, growth levers, 30-60 day focus areas
+
+#### Recruiter Insight View
+**Purpose:** Hiring decision intelligence
+**Focus:** Screening clarity, interview guidance, risk assessment
+**Tone:** Operational, evidence-based, decision-oriented
+**Contains:** Verification summary, confidence levels, hiring recommendations
+
+#### Credibility Card (Future)
+**Purpose:** Professional positioning and visibility
+**Focus:** Identity signaling, percentile positioning
+**Tone:** Neutral, factual, shareable
+**Contains:** Capability identity, key strengths, verification status
 
 ---
 
@@ -95,11 +144,12 @@ Every piece of information is classified into:
 - **UI Components**: shadcn/ui + Radix UI
 - **Animations**: Framer Motion
 
-### Backend (Planned)
+### Backend (Implemented)
+- **Analysis Engine**: Python Skill Intelligence Engine (FastAPI)
 - **Database**: Supabase (PostgreSQL)
-- **APIs**: GitHub API, LeetCode scraping, LinkedIn (planned)
-- **Analysis**: Custom scoring algorithms
-- **AI**: LLM-assisted report generation (GPT-4)
+- **APIs**: GitHub API integration, LeetCode data extraction
+- **Analysis**: 4-domain capability assessment with cross-correlation
+- **AI**: Template-based intelligence generation (LLM-ready)
 
 ### Infrastructure
 - **Hosting**: Vercel
@@ -108,36 +158,83 @@ Every piece of information is classified into:
 
 ---
 
+## 🧠 Technical Achievement: Skill Intelligence Engine
+
+CredDev has evolved from a **platform analyzer** to a **capability intelligence system**:
+
+### **Before: Platform-Centric Analysis**
+- GitHub stats, LeetCode scores, LinkedIn metrics
+- Basic verification against stated claims
+- Platform-specific insights and recommendations
+
+### **After: Capability Intelligence**
+- **4-Domain Analysis**: Engineering depth, problem-solving capability, credibility signals, execution consistency
+- **Intelligence Core**: Single source of truth with cross-domain correlation
+- **Stakeholder Views**: Developer growth insights, recruiter hiring intelligence
+- **Evidence Framework**: VERIFIED/PLAUSIBLE/CLAIMED classification system
+
+### **Key Innovation: Intelligence Architecture**
+```
+Raw Signals → Domain Analysis → Intelligence Core → Derived Views
+     ↓              ↓              ↓              ↓
+  GitHub/         Engineering/    Capability     Developer/
+  LeetCode       Problem Solving Identity      Recruiter
+  Resume         Credibility/                  Insights
+                 Execution
+```
+
+**Result**: Platform-agnostic capability assessment that answers: "*What can this person build? How do they solve problems? Are they reliable? What role fits them?*"
+
+---
+
 ## 📁 Project Structure
 
 ```
 cred-dev/
-├── app/
-│   ├── page.tsx                    # Landing page
+├── app/                           # Next.js Frontend
+│   ├── page.tsx                   # Landing page
 │   ├── report/
 │   │   ├── Burhanuddin/
-│   │   │   └── page.tsx           # Sample report page
+│   │   │   └── page.tsx          # Sample report page
 │   │   └── [candidate]/
-│   │       └── page.tsx           # Dynamic report routes (planned)
-│   └── globals.css                 # Global styles
-├── components/
+│   │       └── page.tsx          # Dynamic report routes (planned)
+│   └── globals.css                # Global styles
+├── components/                    # React Components
 │   ├── sections/
-│   │   ├── hero.tsx               # Hero with CTA
-│   │   ├── problem.tsx            # Problem statement
-│   │   ├── how-it-works.tsx       # 3-step process
-│   │   ├── sample-output.tsx      # Report preview + CTA
+│   │   ├── hero.tsx              # Hero with CTA
+│   │   ├── problem.tsx           # Problem statement
+│   │   ├── how-it-works.tsx      # 3-step process
+│   │   ├── sample-output.tsx     # Report preview + CTA
 │   │   ├── for-developers.tsx
 │   │   ├── for-recruiters.tsx
-│   │   ├── waitlist-form.tsx      # Supabase-connected
+│   │   ├── waitlist-form.tsx     # Supabase-connected
 │   │   └── footer.tsx
-│   └── ui/                         # shadcn/ui components
-├── reports/                        # Report guidelines & samples
-│   ├── REPORT_GUIDELINES.md       # Comprehensive writing standards
-│   ├── REPORT_CHECKLIST.md        # Quick reference checklist
-│   ├── Pradeep/
-│   │   ├── Pradeep.txt            # Extensive report
-│   │   ├── Pradeep_Overview.md    # Overview report
-│   │   └── Pradeep_Snapshot.md    # Snapshot report
+│   └── ui/                        # shadcn/ui components
+├── server/                        # Backend Services
+│   ├── user-service/              # User management (planned)
+│   └── cred-service/              # Skill Intelligence Engine
+│       ├── app/                   # FastAPI application
+│       │   ├── main.py           # API server
+│       │   ├── config.py         # Environment config
+│       │   ├── database.py       # SQLAlchemy models
+│       │   └── routes/           # API endpoints
+│       │       └── analyze.py    # Analysis endpoints
+│       ├── services/             # Business logic
+│       │   ├── verifier.py       # 4-domain analysis
+│       │   ├── github_fetcher.py # GitHub integration
+│       │   ├── report_generator.py # Intelligence generation
+│       │   └── __init__.py       # AnalysisService orchestrator
+│       ├── models/               # Data models
+│       │   ├── analysis.py       # API models
+│       │   └── reports.py        # Intelligence models
+│       └── utils/                # Helpers
+├── reports/                       # Intelligence Guidelines
+│   ├── REPORT_GUIDELINES.md      # Skill Intelligence Engine Model
+│   ├── REPORT_CHECKLIST.md       # 9-stage workflow
+│   ├── Pradeep/                  # Sample analyses
+│   │   ├── Pradeep.txt
+│   │   ├── Pradeep_Overview.md
+│   │   └── Pradeep_Snapshot.md
 │   ├── Burhanuddin/
 │   │   ├── Burhanuddin.txt
 │   │   ├── Burhanuddin_Overview.md
@@ -146,9 +243,9 @@ cred-dev/
 │       ├── Gauri.txt
 │       └── Gauri_Snapshot.md
 ├── lib/
-│   ├── supabase.ts                # Supabase client
-│   └── utils.ts                   # Utility functions
-└── public/                        # Static assets
+│   ├── supabase.ts               # Supabase client
+│   └── utils.ts                  # Utility functions
+└── public/                       # Static assets
 ```
 
 ---
@@ -362,38 +459,47 @@ Add environment variables in Vercel dashboard under **Settings → Environment V
 
 ---
 
-## 📈 Roadmap
+## 📈 Implementation Roadmap
 
-### Phase 1: Pre-Launch (Current)
-- [x] Landing page with waitlist
-- [x] Sample report pages (Burhanuddin)
-- [x] Report writing guidelines & checklists
-- [x] 3-layer reporting system defined
-- [x] Fact-checking philosophy established
-- [ ] Custom domain setup
-- [ ] SEO optimization
+### ✅ **Phase 1: Intelligence Engine Foundation (COMPLETED)**
+- [x] **Skill Intelligence Engine Model** - 4-domain analysis architecture
+- [x] **Intelligence Core & Derived Views** - Multi-stakeholder output system
+- [x] **VERIFIED/PLAUSIBLE/CLAIMED framework** - Evidence-based verification
+- [x] **Backend Infrastructure** - FastAPI service with database models
+- [x] **API Endpoints** - Analysis job creation and status tracking
+- [x] **Landing page with waitlist** - Supabase-connected user acquisition
+- [x] **Intelligence Guidelines** - REPORT_GUIDELINES.md & REPORT_CHECKLIST.md
 
-### Phase 2: MVP (Q2 2026)
-- [ ] GitHub API integration
-- [ ] LeetCode scraping automation
-- [ ] LinkedIn data collection (via consent)
-- [ ] Automated report generation
-- [ ] Developer dashboard
-- [ ] Recruiter portal (search & filter)
+### 🔄 **Phase 2: Platform Integration & Analysis (IN PROGRESS)**
+- [x] **GitHub API Integration** - Repository analysis and engineering signals
+- [ ] **LeetCode Data Extraction** - Problem-solving pattern analysis
+- [ ] **Resume Parsing** - PDF/text extraction and claim identification
+- [ ] **Cross-platform Verification** - Timeline and claim consistency
+- [ ] **Database Result Storage** - Complete analysis persistence
+- [ ] **Error Handling & Logging** - Robust background processing
 
-### Phase 3: Scale (Q3 2026)
-- [ ] AI-assisted analysis (LLM integration)
-- [ ] Fraud detection algorithms
-- [ ] Batch processing for companies
-- [ ] Email notification system
-- [ ] Analytics dashboard
-- [ ] API for enterprise clients
+### 🚀 **Phase 3: Intelligence Generation & UI (NEXT)**
+- [ ] **Full Analysis Pipeline** - End-to-end intelligence generation
+- [ ] **Developer Dashboard** - Analysis results and growth insights
+- [ ] **Recruiter Portal** - Search, filter, and hiring intelligence
+- [ ] **Dynamic Report Pages** - Real-time analysis visualization
+- [ ] **Frontend-Backend Integration** - Complete user experience
+- [ ] **API Rate Limiting & Caching** - Production-ready performance
 
-### Phase 4: Monetization (Q4 2026)
-- [ ] Freemium model for developers
-- [ ] Recruiter subscription tiers
-- [ ] Enterprise API pricing
-- [ ] White-label solutions
+### 🌟 **Phase 4: Advanced Features & Scale (FUTURE)**
+- [ ] **LLM-Enhanced Analysis** - Natural language intelligence generation
+- [ ] **LinkedIn Integration** - Professional network and credibility signals
+- [ ] **Batch Processing** - Enterprise-scale analysis capabilities
+- [ ] **Analytics Dashboard** - Usage metrics and intelligence insights
+- [ ] **Email Notifications** - Analysis completion and insights delivery
+- [ ] **Enterprise API** - White-label and integration solutions
+
+### 🎯 **Current Status**
+- **Frontend**: Landing page with waitlist ✅
+- **Backend**: Skill Intelligence Engine core ✅
+- **Analysis**: 4-domain framework ✅
+- **Integration**: Basic API working ✅
+- **Production**: Ready for MVP testing 🔄
 
 ---
 
