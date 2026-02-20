@@ -1,392 +1,381 @@
-# CredDev Report - Quick Reference Checklist
+# CREDDEV REPORT CHECKLIST — V2
 
-**Use this before submitting any report**
+### (Skill Intelligence Engine Workflow)
 
----
-
-## 📊 CHOOSE YOUR LAYER
-
-Before starting, identify which report layer you're creating:
-
-- **Extensive Report** → Use Checklist A (most comprehensive)
-- **Overview Report** → Use Checklist B (hiring manager focused)
-- **Snapshot Report** → Use Checklist C (recruiter screening)
+This checklist is about building structured capability intelligence.
 
 ---
 
-# 🔷 UNIVERSAL CHECKLIST (ALL LAYERS)
+# STAGE 0 — INPUT COLLECTION
 
-**These apply to EVERY report regardless of layer**
+Before analysis begins, confirm:
 
----
+### Required Inputs
 
-## ⚡ Quick Verification Checklist
+* [ ] Resume (latest version)
+* [ ] GitHub profile
+* [ ] LeetCode / CP profile
+* [ ] LinkedIn profile
 
-### 1️⃣ LANGUAGE AUDIT (30 seconds)
+Optional but valuable:
 
-Search report for these words. If found, verify they have proof:
+* [ ] Portfolio
+* [ ] Blog / Medium
+* [ ] Open source contributions
+* [ ] Certifications proof links
 
-- [ ] "expertise" → Replace with "experience" unless 5+ years OR recognized achievement
-- [ ] "specialization" → Replace with "focus" unless 5+ years OR certification
-- [ ] "expert" → Replace with "experienced" unless industry recognition
-- [ ] "strong" → Replace with "adequate/within range" unless data proves top 20%
-- [ ] "solid" → Replace with "appropriate" unless above average
-- [ ] "excellent" → Replace with "good" unless top 5% with proof
-- [ ] "deep knowledge" → Replace with "working knowledge" unless 5+ years
-- [ ] "advanced" → Replace with "intermediate" unless certified OR hard problem solver
-- [ ] "proven track record" → Replace with "work history shows" unless multiple verified projects
-- [ ] "mastery" → Remove unless clear proof (certifications, competitions)
+If any input is missing:
 
----
-
-### 2️⃣ VERIFICATION TIER CHECK (1 minute)
-
-For each major claim in report:
-
-- [ ] ✅ **VERIFIED** = Can independently confirm (LeetCode stats, GitHub count, LinkedIn dates)
-- [ ] 🟡 **PLAUSIBLE** = Aligns with context but can't confirm (project at verified company)
-- [ ] ⚠️ **CLAIMED** = Resume metric that can't be verified (percentages, impact claims)
-
-**If CLAIMED, must have disclaimer:**
-```
-⚠️ NOTE: [Metric] is candidate's claim. Cannot be independently 
-verified without access to [source]. [Realistic range comment if applicable]
-```
+* [ ] Clearly log as “data limitation”
+* [ ] Do NOT estimate performance
 
 ---
 
-### 3️⃣ MANDATORY DISCLAIMERS (2 minutes)
+# STAGE 1 — RAW SIGNAL EXTRACTION
 
-Check report has disclaimers for:
+Do NOT interpret yet.
 
-- [ ] Any percentage claim ("70% reduction", "40% improvement")
-- [ ] Any impact metric ("10M requests/day", "saved $X")
-- [ ] Any team size claim ("led team of X")
-- [ ] Any private/inaccessible profile (LeetCode private, GitHub private)
-- [ ] Any skill listed but not demonstrated ("listed but not shown in public work")
+Just extract observable signals.
 
 ---
 
-### 4️⃣ NO ASSUMPTIONS RULE (1 minute)
+## 1A — Engineering Evidence Extraction
 
-Search for assumption phrases. Replace if found:
+From GitHub / projects:
 
-- [ ] "likely" → State "data not available" instead
-- [ ] "probably" → State "cannot verify" instead  
-- [ ] "assumed" → State "insufficient data" instead
-- [ ] "estimated" → State actual data or "cannot determine" instead
-- [ ] "appears to be" → State what IS confirmed, not what appears
+* [ ] Total repos
+* [ ] Original vs fork ratio
+* [ ] Commit frequency pattern (consistent vs burst)
+* [ ] Language distribution
+* [ ] Presence of backend/frontend/system code
+* [ ] Readme quality
+* [ ] Signs of production thinking (env files, configs, docker, CI)
+* [ ] Architecture indicators (microservices? monolith?)
+* [ ] Depth of largest project
+* [ ] Code complexity level (basic CRUD vs multi-service)
 
----
-
-### 5️⃣ CROSS-PLATFORM CONSISTENCY (2 minutes)
-
-- [ ] Timeline verified across LinkedIn/Resume/GitHub/LeetCode
-- [ ] Skills match across platforms (Java in resume = Java in GitHub/LeetCode?)
-- [ ] Location consistent across profiles
-- [ ] Experience years accurate (calculate from actual dates, not resume claim)
-- [ ] No contradictions between sources
+Do NOT score yet.
 
 ---
 
-### 6️⃣ RED FLAGS CHECKED (2 minutes)
+## 1B — Problem Solving Evidence Extraction
 
-- [ ] No timeline fraud (experience vs activity age)
-- [ ] No bulk commits (100+ commits in one day)
-- [ ] No fork-only GitHub (all repos forked, none modified)
-- [ ] No LeetCode cramming (all problems in 1-2 weeks suspiciously)
-- [ ] No fake companies (all employers verified)
-- [ ] No diploma mills (education institutions verified)
-- [ ] No inflated titles ("Senior" at 1 YOE)
+From LeetCode / CP:
 
----
+* [ ] Total solved
+* [ ] Easy/Medium/Hard ratio
+* [ ] Acceptance rate
+* [ ] Rank percentile (if available)
+* [ ] Activity consistency (heatmap)
+* [ ] Streak behavior
+* [ ] Recent activity drop/spike
+* [ ] Contest participation
 
-### 7️⃣ SCORE JUSTIFICATION (1 minute)
-
-For each score, verify report includes:
-
-- [ ] Specific data points used
-- [ ] Benchmark comparison ("compared to X average")
-- [ ] What would improve the score
-- [ ] Why not higher/lower
-
-Example: ✅ "6.8/10 based on 201 problems (avg: 150-300 for 2 YOE). Would be 8.0/10 with 300+ problems and 65% acceptance rate."
+Do NOT judge volume alone.
 
 ---
 
-### 8️⃣ FACTUAL SUMMARY CHECK (30 seconds)
+## 1C — Professional Credibility Signals
 
-Opening summary must be:
+From LinkedIn + Resume:
 
-- [ ] Factual (no marketing language)
-- [ ] Specific (actual role, actual years, actual focus)
-- [ ] Honest (includes gaps or concerns if significant)
-- [ ] Neutral tone (not selling, not criticizing)
+* [ ] Timeline consistency across platforms
+* [ ] Company existence verification
+* [ ] Job title inflation check
+* [ ] Skills match GitHub languages?
+* [ ] Career progression logic
+* [ ] Education legitimacy
+* [ ] Resume metrics (tag as CLAIMED)
 
-❌ BAD: "Exceptional backend expert with strong expertise in microservices"
-✅ GOOD: "Backend developer with 2 years experience working primarily in Java Spring Boot"
+Mark each claim:
 
----
-
-## 🚨 CRITICAL STOPS
-
-**DO NOT submit report if:**
-
-1. ❌ Any percentage/impact metric lacks ⚠️ NOTE disclaimer
-2. ❌ Uses "expertise/expert/mastery" without clear proof
-3. ❌ Makes assumptions instead of stating data limitations
-4. ❌ Has contradictions in timeline/skills across platforms
-5. ❌ Scores lack clear data-based justification
+* VERIFIED
+* PLAUSIBLE
+* CLAIMED
 
 ---
 
-## ✅ GREEN LIGHT INDICATORS
+## 1D — Execution & Consistency Signals
 
-**Report is ready if:**
+Across platforms:
 
-1. ✅ All claims marked as VERIFIED, PLAUSIBLE, or CLAIMED
-2. ✅ Disclaimers present for all unverifiable metrics
-3. ✅ Language is neutral and fact-based
-4. ✅ No assumptions presented as facts
-5. ✅ Cross-platform consistency verified
-6. ✅ Scores justified with specific data
-7. ✅ Red flags section complete (even if "None detected")
-8. ✅ Data limitations clearly stated
+* [ ] Long-term engagement (>12 months?)
+* [ ] Learning pattern visible?
+* [ ] Skill evolution visible?
+* [ ] Projects improving over time?
+* [ ] Activity completely stagnant?
+* [ ] Sudden cramming pattern?
 
----
-
-## 📊 Score Sanity Check
-
-| Score | Must Have | Red Flags If |
-|-------|-----------|--------------|
-| **9.0+** | Multiple platforms verified, public showcase, no red flags | Single platform only, no public work |
-| **8.0-8.9** | Good verification, above average metrics | Below average metrics given score |
-| **7.0-7.9** | Adequate verification, average+ performance | Unverified claims treated as fact |
-| **6.0-6.9** | Basic verification, average performance | Major gaps not acknowledged |
-| **<6.0** | Limited verification OR red flags present | Given high score despite issues |
+Still no scoring.
 
 ---
 
-## 🎯 Final Question Before Submit
+# STAGE 2 — DOMAIN MAPPING
 
-**"If this report was about me, would I feel it's:**
-- ✅ Honest and fair?
-- ✅ Based on facts I can verify?
-- ✅ Free from marketing hype?
-- ✅ Clear about what's proven vs claimed?
+Now convert signals into skill domains.
 
-If answer is YES to all → **SUBMIT**  
-If answer is NO to any → **REVISE**
+This is where interpretation begins.
 
 ---
 
-**Quick Reference Version 1.0**  
-**Use with:** [Full REPORT_GUIDELINES.md](/reports/REPORT_GUIDELINES.md)
+## Domain 1 — Engineering & Development
+
+Ask:
+
+* Can this person build production-grade systems?
+* Is architecture visible?
+* Is code ownership visible?
+* Is this tutorial-level or production-level work?
+
+Classify:
+
+* [ ] Foundational
+* [ ] Production-capable
+* [ ] Architecture-aware
+* [ ] Advanced system-level
+
+Write:
+
+Engineering maturity statement (2–3 lines).
 
 ---
 
-# 🔷 CHECKLIST A: EXTENSIVE REPORT
+## Domain 2 — Problem Solving
 
-**For:** Tech leads, deep technical vetting  
-**Length:** 1000-1200 lines  
-**Time to write:** 3-4 hours
+Ask:
 
----
+* Interview-ready?
+* Competitive programmer?
+* Casual learner?
+* Outdated skills?
 
-## A1. Content Requirements
+Classify:
 
-### Must Include:
-- [ ] Complete platform-by-platform analysis (GitHub, LeetCode, LinkedIn, Resume)
-- [ ] Detailed work project assessment with credibility ratings
-- [ ] Developer growth recommendations (actionable, specific)
-- [ ] Interview focus areas with sample questions
-- [ ] Compensation insights (market rates, positioning)
-- [ ] Future trajectory predictions (scenario-based)
-- [ ] Benchmarking tables (vs cohort, percentiles)
-- [ ] Next steps and action items for recruiters
+* [ ] Beginner DSA
+* [ ] Interview-prep ready
+* [ ] Strong algorithmic depth
+* [ ] Contest-grade
 
-### Platform Analysis Depth:
-- [ ] GitHub: Every repo reviewed, code quality assessed, commit patterns analyzed
-- [ ] LeetCode: Year-by-year breakdown, topic distribution, activity patterns
-- [ ] LinkedIn: Company verification with funding/revenue data
-- [ ] Resume: Line-by-line claim verification
+Write:
 
-### Can Be Prescriptive:
-- [ ] Suggest specific interview questions
-- [ ] Recommend salary ranges
-- [ ] Advise on preparation timeline
-- [ ] Provide hiring process recommendations
+Problem-solving maturity statement.
 
 ---
 
-## A2. Extensive Report Structure Check
+## Domain 3 — Professional Credibility
 
-- [ ] Header with complete metadata
-- [ ] Executive summary (comprehensive)
-- [ ] Score breakdown with detailed justification
-- [ ] Platform analysis (all platforms, full detail)
-- [ ] Cross-platform consistency analysis
-- [ ] Work project deep-dives
-- [ ] Benchmarking section
-- [ ] Growth recommendations
-- [ ] Interview preparation guide
-- [ ] Compensation analysis
-- [ ] Future trajectory section
-- [ ] Recruiter recommendations
+Ask:
 
----
+* Are claims aligned with evidence?
+* Any exaggeration?
+* Is role positioning realistic?
+* Any trust gaps?
 
-# 🔷 CHECKLIST B: OVERVIEW REPORT
+Classify:
 
-**For:** Hiring managers, recruiters (decision-making)  
-**Length:** 300-400 lines (1-2 pages)  
-**Time to write:** 1-2 hours
+* [ ] High alignment
+* [ ] Minor claim inflation
+* [ ] Evidence gap
+* [ ] Credibility risk
+
+Write:
+
+Credibility assessment statement.
 
 ---
 
-## B1. Content Requirements
+## Domain 4 — Execution & Consistency
 
-### Must Include:
-- [ ] Executive summary (3-4 sentences, factual)
-- [ ] "What We Verified" section (clear, specific)
-- [ ] Key strengths (3-5 verified facts)
-- [ ] Key concerns (3-5 verified issues)
-- [ ] Role fit assessment (specific roles)
-- [ ] Interview readiness by company type
-- [ ] Hiring recommendation with confidence level
-- [ ] Market value indicators (factual positioning)
+Ask:
 
-### Must Exclude:
-- [ ] ❌ No repetitive platform details (already in extensive)
-- [ ] ❌ No granular metrics (keep high-level)
-- [ ] ❌ No developer growth plans (not hiring manager focus)
-- [ ] ❌ No detailed benchmarking tables
+* Is this disciplined effort?
+* Short-term spike?
+* Passive profile?
+* Growth-oriented?
 
-### Verification Clarity:
-- [ ] Clear distinction: Verified vs Claimed
-- [ ] Disclaimers for all unverified metrics
-- [ ] Cross-platform consistency summary
-- [ ] Red flags clearly called out (if any)
+Classify:
+
+* [ ] High consistency
+* [ ] Moderate engagement
+* [ ] Irregular effort
+* [ ] Concerning inactivity
+
+Write:
+
+Execution behavior statement.
 
 ---
 
-## B2. Overview Report Structure Check
+# STAGE 3 — CROSS-DOMAIN CORRELATION
 
-- [ ] Header with key metadata
-- [ ] Quick summary (hiring decision focus)
-- [ ] What we verified section
-- [ ] Employment history (with verification status)
-- [ ] Education (with verification status)
-- [ ] Technical skills breakdown
-- [ ] Key strengths section (3-5 points)
-- [ ] Key concerns section (3-5 points)
-- [ ] Interview readiness assessment
-- [ ] Hiring recommendation
-- [ ] Important notes/disclaimers footer
+Now connect domains.
 
----
+This is critical.
 
-# 🔷 CHECKLIST C: SNAPSHOT REPORT
+Check:
 
-**For:** Recruiters (initial screening, 60-second read)  
-**Length:** 200-250 lines  
-**Time to write:** 45-60 minutes
+* [ ] Strong engineering but weak DSA?
+* [ ] Strong DSA but no production?
+* [ ] Strong resume but weak public evidence?
+* [ ] High activity but shallow depth?
+
+This creates:
+
+Capability Pattern.
+
+Write 1 paragraph describing the overall pattern.
 
 ---
 
-## C1. Content Requirements (Facts Only)
+# STAGE 4 — BENCHMARK POSITIONING
 
-### Must Include:
-- [ ] At-a-glance score + percentile
-- [ ] Visual indicators (🟢🟡🔴 for quick scanning)
-- [ ] Technical skills verification status
-- [ ] Interview readiness by company type (factual)
-- [ ] Reliability signals (authenticity, work ethic, depth)
-- [ ] Key strengths (3-5 verified facts)
-- [ ] Key concerns (3-5 verified gaps)
-- [ ] Profile characteristics (factual list)
-- [ ] Market positioning comparison (vs cohort)
-- [ ] Red/green flags to watch (factual observations)
+Answer:
 
-### CRITICAL: Must Exclude
-- [ ] ❌ No compensation recommendations (salary ranges, offers)
-- [ ] ❌ No "red flag if asking X amount"
-- [ ] ❌ No interview tactics (question lists, what to probe)
-- [ ] ❌ No process prescriptions (next steps, workflow)
-- [ ] ❌ No "when to hire/pass" advice
-- [ ] ❌ No "you need X to make this work"
-- [ ] ❌ No "choose this candidate if..."
-- [ ] ❌ No repeated insights
+Compared to similar experience developers:
 
-### Tone Check:
-- [ ] Factual, not prescriptive
-- [ ] Neutral, not advisory
-- [ ] Informative, not directive
-- [ ] Shows data, doesn't tell what to do
+* Engineering: Below / Average / Above
+* Problem Solving: Below / Average / Above
+* Credibility: Weak / Stable / Strong
+* Execution: Weak / Moderate / Strong
+
+Do NOT inflate.
+
+If unsure:
+state limitation.
 
 ---
 
-## C2. Snapshot Report Structure Check
+# STAGE 5 — CAPABILITY IDENTITY LINE
 
-- [ ] Header with quick metadata
-- [ ] Hiring decision summary box (score, confidence, risk)
-- [ ] At-a-glance metrics table
-- [ ] Key strengths (factual bullets)
-- [ ] Key concerns (factual bullets)
-- [ ] Reliability signals (data-based ratings)
-- [ ] Hiring parameters (interview readiness ONLY)
-- [ ] Market value indicators (NOT compensation advice)
-- [ ] Red/green flags (factual observations)
-- [ ] Comparative positioning (vs market average)
-- [ ] Profile characteristics (factual summary)
+Must generate:
 
----
+One precise sentence.
 
-## C3. Snapshot-Specific Language Audit
+Structure:
 
-**Replace prescriptive language:**
+[Primary role] + [maturity level] + [strength bias] + [risk note if needed]
 
-- [ ] "You should hire if..." → "Profile characteristics: [facts]"
-- [ ] "We recommend offering ₹X-Y" → "Market value indicators: [facts]"
-- [ ] "Ask these questions..." → Remove entirely
-- [ ] "Next steps: Schedule X rounds" → Remove entirely
-- [ ] "When to pass on candidate" → "Profile characteristics: [facts]"
-- [ ] "Red flag if asking ₹X" → Remove entirely
-- [ ] "You need senior engineers to mentor" → Remove entirely
+Example:
 
-**Use factual statements:**
+“Backend-focused engineer with production fintech exposure and moderate algorithmic depth, showing strong execution discipline.”
 
-- [ ] ✅ "2 years verified experience at Series A startup"
-- [ ] ✅ "LeetCode: 201 problems (Top 40-45% for experience level)"
-- [ ] ✅ "Backend-specialized (limited full-stack evidence)"
-- [ ] ✅ "Domain expertise: Above average (fintech is specialized)"
+This becomes identity anchor.
 
 ---
 
-# 🔷 FINAL SIGN-OFF (ALL LAYERS)
+# STAGE 6 — SCORE GENERATION
 
-Before submitting ANY report:
+Now score domains individually.
 
-## Universal Checks:
-- [ ] All universal checklist items passed (language, verification, disclaimers)
-- [ ] Layer-appropriate content (included what should be, excluded what shouldn't)
-- [ ] Tone matches layer purpose
-- [ ] Length is within target range
-- [ ] No contradictions between sections
+Weight suggestion (can evolve):
 
-## Layer Verification:
-- [ ] **Extensive:** Includes all deep-dive sections, can be prescriptive
-- [ ] **Overview:** Focused on hiring decision, no repetitive details
-- [ ] **Snapshot:** ONLY facts + market positioning, NO advice/tactics/process
+* Engineering → 35%
+* Problem Solving → 25%
+* Professional Credibility → 20%
+* Execution → 20%
 
-## Final Question:
-**"Does this report serve its intended audience appropriately?"**
+Checklist:
 
-- Extensive → Tech lead gets complete analysis? ✅/❌
-- Overview → Hiring manager can make decision? ✅/❌
-- Snapshot → Recruiter can screen in 60 seconds? ✅/❌
+* [ ] Each score justified with data
+* [ ] Benchmarked
+* [ ] Not influenced by resume hype
+* [ ] Penalized only for real gaps
+
+Generate:
+
+Overall Credibility Score (X/10)
 
 ---
 
-**Quick Reference Version 2.0 (Layered)**  
-**Use with:** [Full REPORT_GUIDELINES.md](/reports/REPORT_GUIDELINES.md)
+# STAGE 7 — RISK & SIGNAL FLAGS
+
+List clearly:
+
+Green Signals:
+
+* [ ] e.g., consistent 2-year activity
+* [ ] verified fintech exposure
+* [ ] architecture-level repos
+
+Yellow Signals:
+
+* [ ] declining LC activity
+* [ ] limited OSS
+* [ ] private repos
+
+Red Signals:
+
+* [ ] timeline mismatch
+* [ ] bulk commit pattern
+* [ ] unverifiable inflated claims
+
+Be factual.
+
+Never dramatic.
+
+---
+
+# STAGE 8 — INTELLIGENCE CORE COMPLETION CHECK
+
+Before moving to derived outputs:
+
+Confirm:
+
+* [ ] All 4 domains interpreted
+* [ ] Cross-domain pattern written
+* [ ] Capability identity created
+* [ ] Scores justified
+* [ ] Signals flagged
+* [ ] Claims tagged correctly
+* [ ] No assumption statements
+
+If YES → Intelligence Core is complete.
+
+---
+
+# STAGE 9 — DERIVED OUTPUT PREP
+
+From Intelligence Core:
+
+Generate:
+
+### Developer Insight View
+
+Must include:
+
+* Role clarity
+* Growth levers
+* 30–60 day improvement focus
+* Strength reinforcement
+* Positioning advice
+
+### Recruiter Insight View
+
+Must include:
+
+* Screening clarity
+* Verified signals summary
+* Interview depth indicator
+* Risk awareness
+* Hiring confidence band
+
+These must NOT contradict the Intelligence Core.
+
+---
+
+# FINAL SELF-TEST
+
+Ask yourself:
+
+If platforms disappeared tomorrow…
+
+Can I clearly state:
+
+* What this person can build?
+* How they solve problems?
+* Whether they are reliable?
+* What level they belong to?
+
+If YES → report is strong.
+
+If NO → revisit domain mapping.
