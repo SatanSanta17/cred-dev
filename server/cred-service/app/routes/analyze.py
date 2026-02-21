@@ -104,12 +104,12 @@ async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
                 return {"content": content}
 
         response.update({
-            "intelligence_core": _decode(report_map.get(ReportLayer.INTELLIGENCE_CORE.value)),
+            "intelligence_core": _decode(report_map.get("intelligence_core")),
             "derived_views": {
-                "developer_insight": _decode(report_map.get(ReportLayer.DEVELOPER_INSIGHT.value)),
-                "recruiter_insight": _decode(report_map.get(ReportLayer.RECRUITER_INSIGHT.value))
+                "developer_insight": _decode(report_map.get("developer_insight")),
+                "recruiter_insight": _decode(report_map.get("recruiter_insight"))
             },
-            "credibility_card": _decode(report_map.get(ReportLayer.CREDIBILITY_CARD.value))
+            "credibility_card": _decode(report_map.get("credibility_card"))
         })
 
     if job.error_message:

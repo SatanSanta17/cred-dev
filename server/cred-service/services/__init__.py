@@ -6,7 +6,7 @@ from .github_fetcher import GitHubFetcher
 from .leetcode_fetcher import LeetCodeFetcher
 from .verifier import Verifier
 from .report_generator import ReportGenerator
-from models.reports import IntelligenceCore, ReportLayer
+from models.reports import IntelligenceCore
 from app.database import SessionLocal, AnalysisJob, RawData, Report
 
 
@@ -121,22 +121,11 @@ class AnalysisService:
         db = SessionLocal()
         try:
             now = datetime.utcnow()
-            records = []
-            for data_type in ("resume", "github", "leetcode"):
-                data = raw_data.get(data_type)
-                if data:
-                    records.append(
-                        RawData(
-                            job_id=job_id,
-                            data_type=data_type,
-                            data=data,
-                            fetched_at=now,
-                        )
-                    )
-
-            if not records:
-                return
-
+            records = [
+                RawData(job_id=job_id, data_type="resume", data=raw_data.get("resume", {}), fetched_at=now),
+                RawData(job_id=job_id, data_type="github", data=raw_data.get("github", {}), fetched_at=now),
+                RawData(job_id=job_id, data_type="leetcode", data=raw_data.get("leetcode", {}), fetched_at=now),
+            ]
             db.add_all(records)
             db.commit()
         finally:
@@ -149,32 +138,10 @@ class AnalysisService:
         try:
             now = datetime.utcnow()
 
-            db.query(Report).filter(Report.job_id == job_id).delete()
-
-            db.add(Report(
-                job_id=job_id,
-                layer=ReportLayer.INTELLIGENCE_CORE.value,
-                content=intelligence_core.model_dump_json(),
-                created_at=now,
-            ))
-            db.add(Report(
-                job_id=job_id,
-                layer=ReportLayer.DEVELOPER_INSIGHT.value,
-                content=derived_views['developer_insight'].model_dump_json(),
-                created_at=now,
-            ))
-            db.add(Report(
-                job_id=job_id,
-                layer=ReportLayer.RECRUITER_INSIGHT.value,
-                content=derived_views['recruiter_insight'].model_dump_json(),
-                created_at=now,
-            ))
-            db.add(Report(
-                job_id=job_id,
-                layer=ReportLayer.CREDIBILITY_CARD.value,
-                content=json.dumps(credibility_card),
-                created_at=now,
-            ))
+            db.add(Report(job_id=job_id, layer="intelligence_core", content=intelligence_core.model_dump_json(), created_at=now))
+            db.add(Report(job_id=job_id, layer="developer_insight", content=derived_views['developer_insight'].model_dump_json(), created_at=now))
+            db.add(Report(job_id=job_id, layer="recruiter_insight", content=derived_views['recruiter_insight'].model_dump_json(), created_at=now))
+            db.add(Report(job_id=job_id, layer="credibility_card", content=json.dumps(credibility_card), created_at=now))
 
             job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
             if job:
