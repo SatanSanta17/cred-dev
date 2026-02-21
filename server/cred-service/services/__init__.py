@@ -1,10 +1,14 @@
 # Import services here
+from datetime import datetime
+import json
 from .resume_parser import ResumeParser
 from .github_fetcher import GitHubFetcher
 from .leetcode_fetcher import LeetCodeFetcher
 from .verifier import Verifier
 from .report_generator import ReportGenerator
-from models.reports import IntelligenceCore, DerivedView
+from models.reports import IntelligenceCore, ReportLayer
+from app.database import SessionLocal, AnalysisJob, RawData, Report
+
 
 class AnalysisService:
     """Skill Intelligence Engine - Main orchestrator for complete analysis pipeline."""
@@ -17,7 +21,7 @@ class AnalysisService:
         self.report_generator = ReportGenerator()
 
     async def run_intelligence_engine(self, job_id: str, resume_file, github_url: str,
-                                    leetcode_url: str, candidate_name: str) -> dict:
+                                      leetcode_url: str, candidate_name: str) -> dict:
         """
         Run the complete Skill Intelligence Engine pipeline.
 
@@ -114,21 +118,86 @@ class AnalysisService:
 
     async def _store_raw_data(self, job_id: str, raw_data: dict):
         """Store raw extracted signals."""
-        # TODO: Implement database storage
-        # This would store the raw github_data, leetcode_data, resume_data
-        pass
+        db = SessionLocal()
+        try:
+            now = datetime.utcnow()
+            records = []
+            for data_type in ("resume", "github", "leetcode"):
+                data = raw_data.get(data_type)
+                if data:
+                    records.append(
+                        RawData(
+                            job_id=job_id,
+                            data_type=data_type,
+                            data=data,
+                            fetched_at=now,
+                        )
+                    )
+
+            if not records:
+                return
+
+            db.add_all(records)
+            db.commit()
+        finally:
+            db.close()
 
     async def _store_analysis_results(self, job_id: str, intelligence_core: IntelligenceCore,
-                                    derived_views: dict, credibility_card: dict):
+                                      derived_views: dict, credibility_card: dict):
         """Store complete analysis results."""
-        # TODO: Implement database storage
-        # Store intelligence core, derived views, and credibility card
-        pass
+        db = SessionLocal()
+        try:
+            now = datetime.utcnow()
+
+            db.query(Report).filter(Report.job_id == job_id).delete()
+
+            db.add(Report(
+                job_id=job_id,
+                layer=ReportLayer.INTELLIGENCE_CORE.value,
+                content=intelligence_core.model_dump_json(),
+                created_at=now,
+            ))
+            db.add(Report(
+                job_id=job_id,
+                layer=ReportLayer.DEVELOPER_INSIGHT.value,
+                content=derived_views['developer_insight'].model_dump_json(),
+                created_at=now,
+            ))
+            db.add(Report(
+                job_id=job_id,
+                layer=ReportLayer.RECRUITER_INSIGHT.value,
+                content=derived_views['recruiter_insight'].model_dump_json(),
+                created_at=now,
+            ))
+            db.add(Report(
+                job_id=job_id,
+                layer=ReportLayer.CREDIBILITY_CARD.value,
+                content=json.dumps(credibility_card),
+                created_at=now,
+            ))
+
+            job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+            if job:
+                job.status = "completed"
+                job.updated_at = now
+                job.error_message = None
+
+            db.commit()
+        finally:
+            db.close()
 
     async def _store_error_status(self, job_id: str, error: str):
         """Store error status for failed analysis."""
-        # TODO: Implement error status storage
-        pass
+        db = SessionLocal()
+        try:
+            job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+            if job:
+                job.status = "failed"
+                job.error_message = error
+                job.updated_at = datetime.utcnow()
+                db.commit()
+        finally:
+            db.close()
 
     def _extract_github_username(self, url: str) -> str:
         """Extract GitHub username from URL."""
