@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 from ..database import get_db, AnalysisJob, Report
 from services import AnalysisService
+from models.reports import ReportLayer
 
 router = APIRouter()
 
