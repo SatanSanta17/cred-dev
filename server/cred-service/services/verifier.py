@@ -20,7 +20,7 @@ class Verifier:
     def __init__(self):
         pass
 
-    def analyze_domains(self, resume_data: dict, github_data: dict, leetcode_data: dict) -> Dict[SkillDomain, dict]:
+    def analyze_domains(self, resume_data: dict, github_data: dict, leetcode_data: dict, linkedin_data: dict = None) -> Dict[SkillDomain, dict]:
         """
         Perform domain-based analysis following the Skill Intelligence Engine Model.
 
@@ -33,11 +33,11 @@ class Verifier:
         return {
             SkillDomain.ENGINEERING_DEVELOPMENT: self._analyze_engineering_domain(resume_data, github_data),
             SkillDomain.PROBLEM_SOLVING: self._analyze_problem_solving_domain(leetcode_data),
-            SkillDomain.PROFESSIONAL_CREDIBILITY: self._analyze_credibility_domain(resume_data, github_data),
+            SkillDomain.PROFESSIONAL_CREDIBILITY: self._analyze_credibility_domain(resume_data, github_data, linkedin_data),
             SkillDomain.EXECUTION_CONSISTENCY: self._analyze_execution_domain(github_data, leetcode_data)
         }
 
-    def verify_claims(self, resume_data: dict, github_data: dict, leetcode_data: dict) -> Dict[str, List[dict]]:
+    def verify_claims(self, resume_data: dict, github_data: dict, leetcode_data: dict, linkedin_data: dict = None) -> Dict[str, List[dict]]:
         """
         Extract and verify all claims from resume against platform data.
 
@@ -112,7 +112,7 @@ class Verifier:
 
         return claims
 
-    def _verify_single_claim(self, claim: dict, github_data: dict, leetcode_data: dict) -> dict:
+    def _verify_single_claim(self, claim: dict, github_data: dict, leetcode_data: dict, linkedin_data: dict = None) -> dict:
         """Verify a single claim and return enriched claim data."""
         verified_claim = claim.copy()
         verified_claim['status'] = VerificationStatus.CLAIMED
@@ -124,7 +124,7 @@ class Verifier:
         elif claim['category'] == 'skill':
             self._verify_skill_claim(verified_claim, github_data)
         elif claim['category'] == 'employment':
-            self._verify_employment_claim(verified_claim, github_data)
+            self._verify_employment_claim(verified_claim, github_data, linkedin_data)
         elif claim['category'] == 'project':
             self._verify_project_claim(verified_claim, github_data)
 
@@ -163,10 +163,20 @@ class Verifier:
                     claim['evidence'].append(f"Found related technologies: {', '.join(related_skills)}")
                     claim['confidence'] = 0.7
 
-    def _verify_employment_claim(self, claim: dict, github_data: dict):
-        """Verify employment claims."""
-        # This would need company verification API in production
-        # For now, mark as plausible if we have any work evidence
+    def _verify_employment_claim(self, claim: dict, github_data: dict, linkedin_data: dict = None):
+        """Verify employment claims using GitHub and LinkedIn data."""
+        company_name = claim['text'].replace("Worked at ", "").strip()
+
+        # Check LinkedIn data first (more reliable for employment)
+        if linkedin_data and 'professional_summary' in linkedin_data:
+            companies = linkedin_data['professional_summary'].get('companies', [])
+            if companies and any(company_name.lower() in company.lower() for company in companies):
+                claim['status'] = VerificationStatus.VERIFIED
+                claim['evidence'].append(f"Employment at {company_name} verified on LinkedIn")
+                claim['confidence'] = 0.9
+                return
+
+        # Fallback to GitHub activity as secondary signal
         if github_data and len(github_data.get("repositories", [])) > 0:
             claim['status'] = VerificationStatus.PLAUSIBLE
             claim['evidence'].append("GitHub activity suggests professional development work")
@@ -295,33 +305,88 @@ class Verifier:
             'red_signals': red_signals
         }
 
-    def _analyze_credibility_domain(self, resume_data: dict, github_data: dict) -> dict:
+    def _analyze_credibility_domain(self, resume_data: dict, github_data: dict, linkedin_data: dict = None) -> dict:
         """Analyze Professional Credibility domain."""
         signals = []
         green_signals = []
         yellow_signals = []
         red_signals = []
 
-        # Check timeline consistency
-        if resume_data.get("experience_years", 0) > 0:
+        # Check timeline consistency across platforms
+        resume_years = resume_data.get("experience_years", 0)
+        if resume_years > 0:
             github_years = self._calculate_github_years(github_data) if github_data else 0
-            resume_years = resume_data["experience_years"]
+            linkedin_years = linkedin_data.get('professional_summary', {}).get('experience_years') if linkedin_data else None
 
-            if abs(github_years - resume_years) < 1:
-                green_signals.append("Timeline consistency between resume and GitHub")
-            else:
-                yellow_signals.append(f"Timeline gap: {resume_years} years claimed vs {github_years} years GitHub activity")
+            # Cross-platform timeline verification
+            platforms_data = []
+            if github_years > 0:
+                platforms_data.append(("GitHub", github_years))
+            if linkedin_years:
+                platforms_data.append(("LinkedIn", linkedin_years))
 
-        # Skills verification
-        if "skills" in resume_data and github_data:
+            if len(platforms_data) >= 2:
+                # Check consistency across platforms
+                years_values = [data[1] for data in platforms_data]
+                max_diff = max(years_values) - min(years_values)
+
+                if max_diff < 1:  # Within 1 year across platforms
+                    green_signals.append(f"Timeline consistency across {len(platforms_data)} platforms")
+                elif max_diff < 2:
+                    yellow_signals.append(f"Minor timeline variations across platforms (diff: {max_diff:.1f} years)")
+                else:
+                    red_signals.append(f"Significant timeline inconsistencies across platforms")
+
+            # Individual platform checks
+            if abs(github_years - resume_years) < 1 and github_years > 0:
+                green_signals.append("Resume-GitHub timeline alignment")
+            elif github_years > 0:
+                yellow_signals.append(f"Resume-GitHub timeline gap: {resume_years} vs {github_years} years")
+
+            if linkedin_years and abs(linkedin_years - resume_years) < 1:
+                green_signals.append("Resume-LinkedIn timeline alignment")
+            elif linkedin_years:
+                yellow_signals.append(f"Resume-LinkedIn timeline gap: {resume_years} vs {linkedin_years} years")
+
+        # Skills verification across platforms
+        if "skills" in resume_data:
             claimed_skills = set(s.lower() for s in resume_data["skills"])
-            github_languages = set(lang.lower() for lang in self._extract_repo_languages(github_data))
 
-            matching_skills = claimed_skills.intersection(github_languages)
-            if matching_skills:
-                green_signals.append(f"Skills verified on GitHub: {', '.join(list(matching_skills)[:3])}")
+            # GitHub verification
+            github_verified = set()
+            if github_data:
+                github_languages = set(lang.lower() for lang in self._extract_repo_languages(github_data))
+                github_verified = claimed_skills.intersection(github_languages)
+
+            # LinkedIn verification
+            linkedin_verified = set()
+            if linkedin_data and 'professional_summary' in linkedin_data:
+                linkedin_skills = set(s.lower() for s in linkedin_data['professional_summary'].get('skills', []))
+                linkedin_verified = claimed_skills.intersection(linkedin_skills)
+
+            # Combine verification results
+            all_verified = github_verified.union(linkedin_verified)
+            if all_verified:
+                green_signals.append(f"Skills verified across platforms: {', '.join(list(all_verified)[:3])}")
+            elif github_verified or linkedin_verified:
+                yellow_signals.append(f"Partial skill verification on {'GitHub' if github_verified else 'LinkedIn'}")
             else:
-                yellow_signals.append("Limited skill verification on GitHub")
+                yellow_signals.append("Limited skill verification across platforms")
+
+        # Employment verification using LinkedIn
+        if linkedin_data and 'professional_summary' in linkedin_data:
+            linkedin_companies = linkedin_data['professional_summary'].get('companies', [])
+            resume_companies = resume_data.get('companies', [])
+
+            if linkedin_companies and resume_companies:
+                linkedin_set = set(c.lower() for c in linkedin_companies)
+                resume_set = set(c.lower() for c in resume_companies)
+                matching_companies = linkedin_set.intersection(resume_set)
+
+                if matching_companies:
+                    green_signals.append(f"Employment history verified: {', '.join(list(matching_companies)[:2])}")
+                else:
+                    yellow_signals.append("Employment history discrepancies between resume and LinkedIn")
 
         classification = "evidence_gap"  # default
         score = 5.0

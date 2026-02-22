@@ -22,6 +22,7 @@ class AnalysisJob(Base):
     resume_url = Column(String, nullable=True)
     github_url = Column(String, nullable=True)
     leetcode_url = Column(String, nullable=True)
+    linkedin_url = Column(String, nullable=True)
 
     # Relations
     raw_data = relationship("RawData", back_populates="job")
@@ -32,7 +33,7 @@ class RawData(Base):
 
     id = Column(Integer, primary_key=True)
     job_id = Column(String, ForeignKey("analysis_jobs.id"))
-    data_type = Column(String)  # github, leetcode, resume
+    data_type = Column(String)  # github, leetcode, resume, linkedin
     data = Column(JSON)
     fetched_at = Column(DateTime)
 

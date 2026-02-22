@@ -4,6 +4,7 @@ import json
 from .resume_parser import ResumeParser
 from .github_fetcher import GitHubFetcher
 from .leetcode_fetcher import LeetCodeFetcher
+from .linkedin_fetcher import LinkedInFetcher
 from .verifier import Verifier
 from .report_generator import ReportGenerator
 from models.reports import IntelligenceCore
@@ -17,11 +18,12 @@ class AnalysisService:
         self.resume_parser = ResumeParser()
         self.github_fetcher = GitHubFetcher()
         self.leetcode_fetcher = LeetCodeFetcher()
+        self.linkedin_fetcher = LinkedInFetcher()
         self.verifier = Verifier()
         self.report_generator = ReportGenerator()
 
     async def run_intelligence_engine(self, job_id: str, resume_file, github_url: str,
-                                      leetcode_url: str, candidate_name: str) -> dict:
+                                    leetcode_url: str, linkedin_url: str, candidate_name: str) -> dict:
         """
         Run the complete Skill Intelligence Engine pipeline.
 
@@ -46,19 +48,21 @@ class AnalysisService:
             resume_data = await self._extract_resume_signals(resume_file)
             github_data = await self._extract_github_signals(github_url)
             leetcode_data = await self._extract_leetcode_signals(leetcode_url)
+            linkedin_data = await self._extract_linkedin_signals(linkedin_url)
 
             # Store raw data for job
             await self._store_raw_data(job_id, {
                 'resume': resume_data,
                 'github': github_data,
-                'leetcode': leetcode_data
+                'leetcode': leetcode_data,
+                'linkedin': linkedin_data
             })
 
             # Stage 3: Domain mapping
-            domain_analyses = self.verifier.analyze_domains(resume_data, github_data, leetcode_data)
+            domain_analyses = self.verifier.analyze_domains(resume_data, github_data, leetcode_data, linkedin_data)
 
             # Stage 4: Claim verification
-            claims_analysis = self.verifier.verify_claims(resume_data, github_data, leetcode_data)
+            claims_analysis = self.verifier.verify_claims(resume_data, github_data, leetcode_data, linkedin_data)
 
             # Stage 5-8: Intelligence Core generation
             intelligence_core = self.report_generator.generate_intelligence_core(
@@ -116,6 +120,12 @@ class AnalysisService:
                 return await self.leetcode_fetcher.fetch_user_data(username)
         return {}
 
+    async def _extract_linkedin_signals(self, linkedin_url: str) -> dict:
+        """Stage 1D: Extract LinkedIn signals."""
+        if linkedin_url:
+            return await self.linkedin_fetcher.fetch_user_data(linkedin_url)
+        return {}
+
     async def _store_raw_data(self, job_id: str, raw_data: dict):
         """Store raw extracted signals."""
         db = SessionLocal()
@@ -125,6 +135,7 @@ class AnalysisService:
                 RawData(job_id=job_id, data_type="resume", data=raw_data.get("resume", {}), fetched_at=now),
                 RawData(job_id=job_id, data_type="github", data=raw_data.get("github", {}), fetched_at=now),
                 RawData(job_id=job_id, data_type="leetcode", data=raw_data.get("leetcode", {}), fetched_at=now),
+                RawData(job_id=job_id, data_type="linkedin", data=raw_data.get("linkedin", {}), fetched_at=now),
             ]
             db.add_all(records)
             db.commit()
@@ -176,8 +187,15 @@ class AnalysisService:
 
     def _extract_leetcode_username(self, url: str) -> str:
         """Extract LeetCode username from URL."""
-        # Simple extraction - would use proper parsing in production
+        # Handle both formats: /u/username and /username
         if 'leetcode.com/' in url:
-            parts = url.split('leetcode.com/')[1].split('/')[0]
-            return parts
+            path = url.split('leetcode.com/')[1].strip('/')
+            # Handle /u/username format
+            if path.startswith('u/'):
+                username = path.split('/')[1] if len(path.split('/')) > 1 else ""
+                return username
+            # Handle direct /username format
+            else:
+                username = path.split('/')[0]
+                return username
         return ""

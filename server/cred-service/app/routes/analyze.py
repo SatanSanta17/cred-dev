@@ -17,6 +17,7 @@ async def start_analysis(
     resume: Optional[UploadFile] = File(None),
     github_url: Optional[str] = Form(None),
     leetcode_url: Optional[str] = Form(None),
+    linkedin_url: Optional[str] = Form(None),
     candidate_name: Optional[str] = Form("Anonymous Candidate"),
     user_id: Optional[str] = Form(None),
     db: Session = Depends(get_db)
@@ -32,10 +33,10 @@ async def start_analysis(
     """
 
     # Validate inputs
-    if not any([resume, github_url, leetcode_url]):
+    if not any([resume, github_url, leetcode_url, linkedin_url]):
         raise HTTPException(
             status_code=400,
-            detail="At least one input (resume, github_url, or leetcode_url) required"
+            detail="At least one input (resume, github_url, leetcode_url, or linkedin_url) required"
         )
 
     # Create job
@@ -48,11 +49,18 @@ async def start_analysis(
         updated_at=datetime.utcnow(),
         resume_url=None,  # We'll store file later
         github_url=github_url,
-        leetcode_url=leetcode_url
+        leetcode_url=leetcode_url,
+        linkedin_url=linkedin_url
     )
 
-    db.add(job)
-    db.commit()
+    try:
+        db.add(job)
+        db.commit()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create job: {str(e)}"
+        )
 
     # Trigger background analysis
     analysis_service = AnalysisService()
@@ -62,6 +70,7 @@ async def start_analysis(
         resume_file=resume,
         github_url=github_url,
         leetcode_url=leetcode_url,
+        linkedin_url=linkedin_url,
         candidate_name=candidate_name
     )
 
@@ -116,3 +125,47 @@ async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
         response["error"] = job.error_message
 
     return response
+
+@router.post("/analyze/quick-test")
+async def quick_test_analysis(
+    github_url: Optional[str] = Form(None),
+    leetcode_url: Optional[str] = Form(None),
+    linkedin_url: Optional[str] = Form(None),
+    candidate_name: Optional[str] = Form("Test Candidate")
+):
+    """
+    Quick test endpoint without resume file and background processing.
+    Returns basic analysis results immediately for testing.
+    """
+    results = {
+        "candidate_name": candidate_name,
+        "platforms_analyzed": [],
+        "basic_info": {},
+        "test_status": "success"
+    }
+
+    # Test GitHub
+    if github_url:
+        results["platforms_analyzed"].append("github")
+        results["basic_info"]["github"] = {
+            "url": github_url,
+            "status": "URL received"
+        }
+
+    # Test LeetCode
+    if leetcode_url:
+        results["platforms_analyzed"].append("leetcode")
+        results["basic_info"]["leetcode"] = {
+            "url": leetcode_url,
+            "status": "URL received"
+        }
+
+    # Test LinkedIn
+    if linkedin_url:
+        results["platforms_analyzed"].append("linkedin")
+        results["basic_info"]["linkedin"] = {
+            "url": linkedin_url,
+            "status": "URL received"
+        }
+
+    return results
