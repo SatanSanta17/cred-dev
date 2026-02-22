@@ -1,12 +1,22 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
 from datetime import datetime
-from ..database import get_db, AnalysisJob
+from ..database import get_db, AnalysisJob, Report
 from services import AnalysisService
+from models.reports import ReportLayer
 
 router = APIRouter()
+
+LAYER_FALLBACKS = {
+    ReportLayer.INTELLIGENCE_CORE.value: ("intelligence_core", "extensive"),
+    ReportLayer.DEVELOPER_INSIGHT.value: ("developer_insight",),
+    ReportLayer.RECRUITER_INSIGHT.value: ("recruiter_insight", "overview"),
+    ReportLayer.CREDIBILITY_CARD.value: ("credibility_card", "snapshot"),
+}
+
 
 @router.post("/analyze")
 async def start_analysis(
@@ -37,12 +47,13 @@ async def start_analysis(
 
     # Create job
     job_id = str(uuid.uuid4())
+    now = datetime.utcnow()
     job = AnalysisJob(
         id=job_id,
         user_id=user_id,
         status="processing",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=now,
+        updated_at=now,
         resume_url=None,  # We'll store file later
         github_url=github_url,
         leetcode_url=leetcode_url
@@ -68,6 +79,7 @@ async def start_analysis(
         "message": "Skill Intelligence Engine analysis started. Check status at GET /analyze/{job_id}"
     }
 
+
 @router.get("/analyze/{job_id}")
 async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
     """
@@ -88,32 +100,30 @@ async def get_analysis_status(job_id: str, db: Session = Depends(get_db)):
     }
 
     if job.status == "completed":
-        # TODO: Fetch actual intelligence core and derived views from database
-        # For now, return placeholder structure
+        reports = db.query(Report).filter(Report.job_id == job_id).all()
+        report_map = {report.layer: report.content for report in reports}
+
+        def _decode(content: Optional[str]):
+            if not content:
+                return None
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                return {"content": content}
+
+        def _find_content(layer_key: str):
+            for candidate in LAYER_FALLBACKS[layer_key]:
+                if candidate in report_map:
+                    return report_map[candidate]
+            return None
+
         response.update({
-            "intelligence_core": {
-                "capability_identity": "Generated capability identity",
-                "overall_score": 7.5,
-                "cross_domain_pattern": "Generated pattern analysis",
-                "green_signals": ["Signal 1", "Signal 2"],
-                "yellow_signals": ["Signal 3"],
-                "red_signals": []
-            },
+            "intelligence_core": _decode(_find_content(ReportLayer.INTELLIGENCE_CORE.value)),
             "derived_views": {
-                "developer_insight": {
-                    "content": "Developer-focused insights...",
-                    "key_insights": ["Insight 1", "Insight 2"]
-                },
-                "recruiter_insight": {
-                    "content": "Recruiter-focused insights...",
-                    "key_insights": ["Assessment 1", "Assessment 2"]
-                }
+                "developer_insight": _decode(_find_content(ReportLayer.DEVELOPER_INSIGHT.value)),
+                "recruiter_insight": _decode(_find_content(ReportLayer.RECRUITER_INSIGHT.value))
             },
-            "credibility_card": {
-                "identity": "Card identity",
-                "score": 7.5,
-                "verified_signals": 5
-            }
+            "credibility_card": _decode(_find_content(ReportLayer.CREDIBILITY_CARD.value))
         })
 
     if job.error_message:
