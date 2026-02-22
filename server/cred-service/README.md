@@ -72,9 +72,12 @@ uvicorn app.main:app --reload --port 8000
 # Health check
 curl http://localhost:8000/health
 
-# Start analysis
+# Start analysis (any combination of platforms)
 curl -X POST "http://localhost:8000/api/v1/analyze" \
+  -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/yourusername" \
+  -F "leetcode_url=https://leetcode.com/u/yourusername" \
+  -F "linkedin_url=https://linkedin.com/in/yourprofile" \
   -F "candidate_name=Your Name"
 
 # Check results
@@ -96,8 +99,10 @@ server/cred-service/
 │       └── analyze.py       # API endpoints
 ├── services/
 │   ├── __init__.py          # Main AnalysisService orchestrator
+│   ├── resume_parser.py     # PDF/text resume processing
 │   ├── github_fetcher.py    # GitHub API integration
-│   ├── leetcode_fetcher.py  # LeetCode data extraction
+│   ├── leetcode_fetcher.py  # LeetCode GraphQL API
+│   ├── linkedin_fetcher.py  # LinkedIn profile scraping
 │   ├── verifier.py          # 4-domain analysis engine
 │   └── report_generator.py  # Intelligence Core & views
 ├── models/
@@ -110,9 +115,10 @@ server/cred-service/
 ### Intelligence Pipeline
 
 #### Stage 1: Raw Signal Extraction
+- **Resume**: Skills, experience claims, project descriptions, contact info
 - **GitHub**: Repositories, languages, commit patterns, production indicators
-- **LeetCode**: Problem counts, difficulty ratios, activity patterns
-- **Resume**: Skills, experience claims, project descriptions
+- **LeetCode**: Problem counts, difficulty ratios, activity patterns (GraphQL API)
+- **LinkedIn**: Professional experience, company history, credibility signals
 
 #### Stage 2: 4-Domain Analysis
 
@@ -166,14 +172,22 @@ Health check endpoint.
 ```
 
 #### `POST /api/v1/analyze`
-Start a new analysis job.
+Start a new analysis job using any combination of platforms.
 
-**Request:**
+**Request (All Platforms):**
 ```bash
 curl -X POST "http://localhost:8000/api/v1/analyze" \
+  -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/username" \
-  -F "leetcode_url=https://leetcode.com/username" \
+  -F "leetcode_url=https://leetcode.com/u/username" \
+  -F "linkedin_url=https://linkedin.com/in/profile" \
   -F "candidate_name=John Doe"
+```
+
+**Request (Minimum - Any One Platform):**
+```bash
+curl -X POST "http://localhost:8000/api/v1/analyze" \
+  -F "github_url=https://github.com/username"
 ```
 
 **Response:**
@@ -194,8 +208,8 @@ Get analysis results.
   "job_id": "uuid-here",
   "status": "completed",
   "intelligence_core": {
-    "capability_identity": "Senior backend engineer with fintech exposure and solid algorithmic foundation",
-    "overall_score": 8.2,
+    "capability_identity": "Mid-level backend engineer with solid algorithmic foundation and emerging system design skills",
+    "overall_score": 7.5,
     "domain_analyses": {
       "engineering_development": {
         "classification": "production_capable",
@@ -267,7 +281,6 @@ SUPABASE_SERVICE_KEY=your_service_key
 
 # Application
 DEBUG=true
-CORS_ORIGINS=["http://localhost:3000"]
 ```
 
 ### Database Schema
@@ -283,8 +296,11 @@ CREATE TABLE analysis_jobs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     error_message TEXT,
+    resume_uri VARCHAR,
     github_url VARCHAR,
-    leetcode_url VARCHAR
+    leetcode_url VARCHAR,
+    linkedin_url VARCHAR
+
 );
 
 -- Raw platform data
@@ -316,6 +332,12 @@ CREATE TABLE reports (
 - **Contextual**: Considers experience level and role expectations
 - **Balanced**: Weights multiple factors for comprehensive assessment
 
+### Multi-Platform Data Sources
+- **Resume Processing**: PDF/text parsing with structured extraction
+- **GitHub Integration**: Repository analysis and engineering signals
+- **LeetCode GraphQL**: Official API for problem-solving statistics
+- **LinkedIn Scraping**: Professional credibility and career validation
+
 ### Advanced Verification
 - **VERIFIED**: Observable evidence supports claim
 - **PLAUSIBLE**: Consistent with context but not fully verifiable
@@ -331,27 +353,30 @@ CREATE TABLE reports (
 
 ## 🚦 Development Status
 
-### ✅ Completed
-- Skill Intelligence Engine architecture
-- 4-domain analysis framework
-- Intelligence Core generation
-- Derived Views (Developer & Recruiter insights)
-- Basic API with background processing
-- GitHub integration
-- Database models and connections
+### ✅ **COMPLETED - Production Ready**
+- **Skill Intelligence Engine**: Full 4-domain analysis architecture
+- **Multi-Platform Integration**: Resume, GitHub, LeetCode (GraphQL), LinkedIn
+- **Intelligence Core Generation**: Capability identity and cross-domain patterns
+- **Derived Views**: Developer insights + Recruiter assessments
+- **API Infrastructure**: FastAPI with async processing and background jobs
+- **Database Integration**: PostgreSQL with proper job/result storage
+- **Error Handling**: Comprehensive error handling and fallbacks
+- **Data Processing**: PDF parsing, web scraping, API integrations
 
-### 🔄 In Progress
-- LeetCode data extraction
-- Resume parsing capabilities
-- Database result storage
-- Error handling improvements
+### 🎯 **Current Capabilities**
+- **Resume Analysis**: PDF/text parsing with structured skill/experience extraction
+- **GitHub Intelligence**: Repository patterns, language analysis, production indicators
+- **LeetCode Assessment**: Official GraphQL API with fallback scraping
+- **LinkedIn Verification**: Professional credibility and career timeline validation
+- **Cross-Platform Correlation**: Timeline consistency and claim verification
+- **Intelligence Reports**: VERIFIED/PLAUSIBLE/CLAIMED claim classification
 
-### 📋 Next Steps
-- Complete platform integrations
-- Add LLM-enhanced analysis (optional)
-- Implement result caching
-- Add comprehensive testing
-- Performance optimization
+### 🔧 **Optional Enhancements**
+- LLM-enhanced natural language generation
+- Result caching for performance
+- Advanced analytics dashboard
+- Batch processing for enterprise use
+- Additional platform integrations
 
 ---
 
@@ -368,16 +393,21 @@ curl -X POST "http://localhost:8000/api/v1/analyze" \
 curl "http://localhost:8000/api/v1/analyze/{job_id}"
 ```
 
-### Integration Test
+### Complete System Test
 ```bash
-# Full analysis test
+# Full analysis with all platforms
 curl -X POST "http://localhost:8000/api/v1/analyze" \
+  -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/yourusername" \
-  -F "leetcode_url=https://leetcode.com/yourusername" \
+  -F "leetcode_url=https://leetcode.com/u/yourusername" \
+  -F "linkedin_url=https://linkedin.com/in/yourprofile" \
   -F "candidate_name=Your Name"
 
-# Poll for completion
-watch -n 5 "curl http://localhost:8000/api/v1/analyze/{job_id} | jq .status"
+# Poll for completion (30-60 seconds)
+watch -n 5 "curl -s http://localhost:8000/api/v1/analyze/{job_id} | jq .status"
+
+# View complete intelligence report
+curl "http://localhost:8000/api/v1/analyze/{job_id}" | jq
 ```
 
 ---
