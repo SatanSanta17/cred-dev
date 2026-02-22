@@ -169,14 +169,13 @@ class LeetCodeFetcher:
         ac_submissions = submit_stats.get('acSubmissionNum', [])
         total_submissions = submit_stats.get('totalSubmissionNum', [])
 
-        # Parse accepted submissions
+        # Parse accepted submissions only by explicit difficulty buckets
+        # to avoid double counting aggregate buckets like "All".
         easy_count = medium_count = hard_count = 0
-        total_solved = 0
 
         for submission in ac_submissions:
             difficulty = submission.get('difficulty', '').lower()
             count = submission.get('count', 0)
-            total_solved += count
 
             if difficulty == 'easy':
                 easy_count = count
@@ -184,6 +183,8 @@ class LeetCodeFetcher:
                 medium_count = count
             elif difficulty == 'hard':
                 hard_count = count
+
+        total_solved = easy_count + medium_count + hard_count
 
         # Calculate acceptance rate (rough estimate)
         total_attempted = sum(sub.get('submissions', 0) for sub in total_submissions)
