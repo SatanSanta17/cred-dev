@@ -172,28 +172,36 @@ class LeetCodeFetcher:
         ac_submissions = submit_stats.get('acSubmissionNum', [])
         total_submissions = submit_stats.get('totalSubmissionNum', [])
 
-        accepted_questions = self._extract_difficulty_counts(ac_submissions, 'count')
-        attempted_questions = self._extract_difficulty_counts(total_submissions, 'count')
-        accepted_attempts = self._extract_difficulty_counts(ac_submissions, 'submissions')
-        attempted_attempts = self._extract_difficulty_counts(total_submissions, 'submissions')
+        # Parse accepted submissions only by explicit difficulty buckets
+        # to avoid double counting aggregate buckets like "All".
+        easy_count = medium_count = hard_count = 0
 
-        total_solved = accepted_questions['total']
-        attempted_question_total = attempted_questions['total']
-        accepted_attempt_total = accepted_attempts['total']
-        attempted_attempt_total = attempted_attempts['total']
+        for submission in ac_submissions:
+            difficulty = submission.get('difficulty', '').lower()
+            count = submission.get('count', 0)
 
-        acceptance_rate_attempts = (
-            accepted_attempt_total / attempted_attempt_total * 100
-            if attempted_attempt_total > 0 else 0
-        )
-        acceptance_rate_questions = (
-            total_solved / attempted_question_total * 100
-            if attempted_question_total > 0 else 0
-        )
+            if difficulty == 'easy':
+                easy_count = count
+            elif difficulty == 'medium':
+                medium_count = count
+            elif difficulty == 'hard':
+                hard_count = count
 
-        # Parse recent submission events (attempt-level, not just accepted solutions).
-        recent_submissions = self._parse_recent_submissions(recent_submission_list)
-        recent_metrics = self._build_recent_activity_metrics(recent_submissions)
+        total_solved = easy_count + medium_count + hard_count
+
+        # Calculate acceptance rate (rough estimate)
+        total_attempted = sum(sub.get('submissions', 0) for sub in total_submissions)
+        acceptance_rate = (total_solved / total_attempted * 100) if total_attempted > 0 else 0
+
+        # Parse recent submissions
+        recent_submissions = []
+        for submission in user_data.get('recentSubmissionList', [])[:10]:
+            recent_submissions.append({
+                "title": submission.get('title', ''),
+                "status": submission.get('statusDisplay', 'Accepted'),
+                "language": submission.get('lang', ''),
+                "submitted_at": submission.get('timestamp', '')
+            })
 
         return {
             "username": username,
