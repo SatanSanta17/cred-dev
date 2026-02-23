@@ -8,7 +8,7 @@ class Claim:
 
     def __init__(self, text: str, source: str, category: str):
         self.text = text
-        self.source = source  # "resume", "github", "leetcode"
+        self.source = source  # "resume", "github", "leetcode", "linkedin"
         self.category = category  # "experience", "skill", "metric", etc.
         self.status = VerificationStatus.CLAIMED
         self.evidence = []
@@ -257,41 +257,42 @@ class Verifier:
         green_signals = []
         yellow_signals = []
         red_signals = []
+        
 
         if leetcode_data:
-            stats = leetcode_data.get("stats", {})
-            recent_metrics = leetcode_data.get("recent_metrics", {})
-            solved = stats.get("total_solved", 0)
-            easy = stats.get("easy_count", 0)
-            medium = stats.get("medium_count", 0)
-            hard = stats.get("hard_count", 0)
-            acceptance_attempts = stats.get("acceptance_rate_attempts", stats.get("acceptance_rate", 0))
-            submissions_30d = recent_metrics.get("submissions_last_30_days", 0)
-            language_diversity = recent_metrics.get("language_diversity_recent", 0)
+            recent_activity_metrics = leetcode_data.get("data",{}).get("recent_activity_metrics", {})
+            total_solved = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acSubmissionNum")[0].get("count", 0)
+            total_submissions = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("totalSubmissionNum")[0].get("count", 0)
+            easy= leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acSubmissionNum")[1].get("count", 0)
+            medium = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acSubmissionNum")[2].get("count", 0)
+            hard = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acSubmissionNum")[3].get("count", 0)
+            acceptance_rate = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acceptance_rate", 0)
+            submissions_30d = recent_activity_metrics.get("submissions_last_30_days", 0)
+            language_diversity = recent_activity_metrics.get("language_diversity_recent", 0)
 
-            signals.append(f"Solved: {solved} problems ({easy}E/{medium}M/{hard}H)")
-            signals.append(f"Attempt acceptance rate: {acceptance_attempts:.2f}%")
+            signals.append(f"Solved: {total_solved} problems ({easy}E/{medium}M/{hard}H)")
+            signals.append(f"Attempt acceptance rate: {acceptance_rate:.2f}%")
             if submissions_30d:
                 signals.append(f"Recent activity: {submissions_30d} submissions in last 30 days")
 
-            if solved > 200:
+            if total_solved > 300:
                 green_signals.append("Strong algorithmic foundation")
-            elif solved > 50:
+            elif total_solved > 150:
                 yellow_signals.append("Moderate problem-solving exposure")
             else:
                 red_signals.append("Limited algorithmic practice")
 
-            if acceptance_attempts >= 45:
+            if acceptance_rate >= 60:
                 green_signals.append("Strong submission quality based on acceptance ratio")
-            elif acceptance_attempts < 20 and solved > 100:
+            elif acceptance_rate < 40 and total_submissions > 600:
                 yellow_signals.append("High attempt volume with low acceptance ratio")
 
             if submissions_30d >= 20:
                 green_signals.append("Consistent recent problem-solving activity")
-            elif submissions_30d == 0 and solved > 0:
+            elif submissions_30d == 0 and total_solved > 150:
                 yellow_signals.append("Low recent activity despite solved history")
 
-            if language_diversity >= 2:
+            if language_diversity > 2:
                 green_signals.append("Demonstrates multi-language problem-solving attempts")
 
         classification = "beginner_dsa"  # default
@@ -300,21 +301,20 @@ class Verifier:
 
         # Classification logic
         if leetcode_data:
-            stats = leetcode_data.get("stats", {})
-            recent_metrics = leetcode_data.get("recent_metrics", {})
-            solved = stats.get("total_solved", 0)
-            submissions_30d = recent_metrics.get("submissions_last_30_days", 0)
-            acceptance_attempts = stats.get("acceptance_rate_attempts", stats.get("acceptance_rate", 0))
+            recent_activity_metrics = leetcode_data.get("data",{}).get("recent_activity_metrics", {})
+            total_solved = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acSubmissionNum")[0].get("count", 0)
+            submissions_30d = recent_activity_metrics.get("submissions_last_30_days", 0)
+            acceptance_rate = leetcode_data.get("data",{}).get("matched_user").get("submitStats").get("acceptance_rate", 0)
 
-            if solved > 300:
+            if total_solved > 350:
                 classification = "contest_grade"
                 score = 8.0
                 benchmark = "above"
-            elif solved > 150:
+            elif total_solved > 250:
                 classification = "strong_algorithmic_depth"
                 score = 7.0
                 benchmark = "above"
-            elif solved > 50:
+            elif total_solved > 150:
                 classification = "interview_prep_ready"
                 score = 6.0
                 benchmark = "average"
@@ -322,13 +322,13 @@ class Verifier:
             # Recent consistency and quality can refine score.
             if submissions_30d >= 20:
                 score = min(8.5, score + 0.5)
-            elif submissions_30d == 0 and solved > 0:
-                score = max(3.0, score - 0.5)
+            elif submissions_30d == 0 and total_solved > 0:
+                score = max(5.0, score - 0.5)
 
-            if acceptance_attempts >= 45:
-                score = min(8.5, score + 0.5)
-            elif acceptance_attempts > 0 and acceptance_attempts < 20:
-                score = max(3.0, score - 0.5)
+            if acceptance_rate >= 70:
+                score = min(8, score + 0.5)
+            elif acceptance_rate > 0 and acceptance_rate < 40:
+                score = max(5.0, score - 0.5)
 
         return {
             'classification': classification,
@@ -479,12 +479,13 @@ class Verifier:
 
         # LeetCode consistency
         if leetcode_data:
-            recent_activity = leetcode_data.get("recent_submissions", [])
-            signals.append(f"{len(recent_activity)} recent LeetCode submissions")
+            recent_activity_metrics = leetcode_data.get("data",{}).get("recent_activity_metrics", {})
+            submissions_30d = recent_activity_metrics.get("submissions_last_30_days", 0)
+            signals.append(f"{submissions_30d} recent LeetCode submissions")
 
-            if len(recent_activity) > 50:
+            if submissions_30d > 20:
                 green_signals.append("High LeetCode engagement shows execution discipline")
-            elif len(recent_activity) > 10:
+            elif submissions_30d > 10:
                 yellow_signals.append("Moderate problem-solving consistency")
 
         classification = "moderate_engagement"  # default
@@ -493,7 +494,7 @@ class Verifier:
 
         # Calculate execution score based on activity volume
         github_score = min(len(github_data.get("repositories", [])) / 10, 1) if github_data else 0
-        leetcode_score = min(len(leetcode_data.get("recent_submissions", [])) / 30, 1) if leetcode_data else 0
+        leetcode_score = min(len(leetcode_data.get("data",{}).get("recent_submission_list", [])) / 30, 1) if leetcode_data else 0
 
         combined_score = (github_score + leetcode_score) / 2
 
