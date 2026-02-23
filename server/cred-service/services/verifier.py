@@ -260,12 +260,19 @@ class Verifier:
 
         if leetcode_data:
             stats = leetcode_data.get("stats", {})
+            recent_metrics = leetcode_data.get("recent_metrics", {})
             solved = stats.get("total_solved", 0)
             easy = stats.get("easy_count", 0)
             medium = stats.get("medium_count", 0)
             hard = stats.get("hard_count", 0)
+            acceptance_attempts = stats.get("acceptance_rate_attempts", stats.get("acceptance_rate", 0))
+            submissions_30d = recent_metrics.get("submissions_last_30_days", 0)
+            language_diversity = recent_metrics.get("language_diversity_recent", 0)
 
             signals.append(f"Solved: {solved} problems ({easy}E/{medium}M/{hard}H)")
+            signals.append(f"Attempt acceptance rate: {acceptance_attempts:.2f}%")
+            if submissions_30d:
+                signals.append(f"Recent activity: {submissions_30d} submissions in last 30 days")
 
             if solved > 200:
                 green_signals.append("Strong algorithmic foundation")
@@ -274,13 +281,31 @@ class Verifier:
             else:
                 red_signals.append("Limited algorithmic practice")
 
+            if acceptance_attempts >= 45:
+                green_signals.append("Strong submission quality based on acceptance ratio")
+            elif acceptance_attempts < 20 and solved > 100:
+                yellow_signals.append("High attempt volume with low acceptance ratio")
+
+            if submissions_30d >= 20:
+                green_signals.append("Consistent recent problem-solving activity")
+            elif submissions_30d == 0 and solved > 0:
+                yellow_signals.append("Low recent activity despite solved history")
+
+            if language_diversity >= 2:
+                green_signals.append("Demonstrates multi-language problem-solving attempts")
+
         classification = "beginner_dsa"  # default
         score = 4.0
         benchmark = "below"
 
         # Classification logic
         if leetcode_data:
-            solved = leetcode_data.get("stats", {}).get("total_solved", 0)
+            stats = leetcode_data.get("stats", {})
+            recent_metrics = leetcode_data.get("recent_metrics", {})
+            solved = stats.get("total_solved", 0)
+            submissions_30d = recent_metrics.get("submissions_last_30_days", 0)
+            acceptance_attempts = stats.get("acceptance_rate_attempts", stats.get("acceptance_rate", 0))
+
             if solved > 300:
                 classification = "contest_grade"
                 score = 8.0
@@ -293,6 +318,17 @@ class Verifier:
                 classification = "interview_prep_ready"
                 score = 6.0
                 benchmark = "average"
+
+            # Recent consistency and quality can refine score.
+            if submissions_30d >= 20:
+                score = min(8.5, score + 0.5)
+            elif submissions_30d == 0 and solved > 0:
+                score = max(3.0, score - 0.5)
+
+            if acceptance_attempts >= 45:
+                score = min(8.5, score + 0.5)
+            elif acceptance_attempts > 0 and acceptance_attempts < 20:
+                score = max(3.0, score - 0.5)
 
         return {
             'classification': classification,

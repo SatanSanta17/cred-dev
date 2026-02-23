@@ -3,7 +3,8 @@
 import httpx
 from bs4 import BeautifulSoup
 import asyncio
-from typing import Dict, Any
+from datetime import datetime, timezone
+from typing import Dict, Any, List
 
 class LeetCodeFetcher:
     """Fetches LeetCode profile and problem-solving statistics using GraphQL API."""
@@ -118,7 +119,8 @@ class LeetCodeFetcher:
                     if 'data' in data and 'matchedUser' in data['data']:
                         user_data = data['data']['matchedUser']
                         if user_data:
-                            return self._parse_graphql_response(user_data, username)
+                            recent_submission_list = data['data'].get('recentSubmissionList', [])
+                            return self._parse_graphql_response(user_data, username, recent_submission_list)
                         else:
                             return {
                                 "username": username,
@@ -160,12 +162,13 @@ class LeetCodeFetcher:
                     "fallback_available": True
                 }
 
-    def _parse_graphql_response(self, user_data: Dict[str, Any], username: str) -> Dict[str, Any]:
+    def _parse_graphql_response(self, user_data: Dict[str, Any], username: str,
+                               recent_submission_list: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Parse the GraphQL response into our standardized format."""
         profile = user_data.get('profile', {})
         submit_stats = user_data.get('submitStats', {})
 
-        # Extract submission counts by difficulty
+        # Extract submission counts by explicit difficulty buckets only.
         ac_submissions = submit_stats.get('acSubmissionNum', [])
         total_submissions = submit_stats.get('totalSubmissionNum', [])
 
@@ -211,15 +214,97 @@ class LeetCodeFetcher:
             "skill_tags": profile.get('skillTags', []),
             "stats": {
                 "total_solved": total_solved,
-                "easy_count": easy_count,
-                "medium_count": medium_count,
-                "hard_count": hard_count,
-                "acceptance_rate": round(acceptance_rate, 2),
+                "easy_count": accepted_questions['easy'],
+                "medium_count": accepted_questions['medium'],
+                "hard_count": accepted_questions['hard'],
+                "attempted_question_total": attempted_question_total,
+                "accepted_attempt_total": accepted_attempt_total,
+                "attempted_attempt_total": attempted_attempt_total,
+                "acceptance_rate": round(acceptance_rate_attempts, 2),
+                "acceptance_rate_attempts": round(acceptance_rate_attempts, 2),
+                "acceptance_rate_questions": round(acceptance_rate_questions, 2),
                 "ranking": profile.get('ranking')
             },
             "badges": [badge.get('displayName', '') for badge in user_data.get('badges', [])],
             "recent_submissions": recent_submissions,
+            "recent_metrics": recent_metrics,
             "data_source": "graphql_api"
+        }
+
+    def _extract_difficulty_counts(self, rows: List[Dict[str, Any]], field: str) -> Dict[str, int]:
+        """Extract easy/medium/hard totals from LeetCode stats rows."""
+        counts = {'easy': 0, 'medium': 0, 'hard': 0}
+        for row in rows:
+            difficulty = (row.get('difficulty') or '').lower()
+            if difficulty in counts:
+                counts[difficulty] = int(row.get(field, 0) or 0)
+        counts['total'] = counts['easy'] + counts['medium'] + counts['hard']
+        return counts
+
+    def _parse_recent_submissions(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Normalize recent submission events from GraphQL response."""
+        recent_submissions = []
+        for submission in rows[:20]:
+            timestamp_raw = submission.get('timestamp', '')
+            submitted_at = ''
+            try:
+                if timestamp_raw:
+                    submitted_at = datetime.fromtimestamp(int(timestamp_raw), tz=timezone.utc).isoformat()
+            except (ValueError, TypeError, OSError):
+                submitted_at = ''
+
+            recent_submissions.append({
+                "title": submission.get('title', ''),
+                "title_slug": submission.get('titleSlug', ''),
+                "status": submission.get('statusDisplay', ''),
+                "language": submission.get('lang', ''),
+                "submitted_at": submitted_at,
+                "timestamp": timestamp_raw
+            })
+        return recent_submissions
+
+    def _build_recent_activity_metrics(self, recent_submissions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate recent activity indicators for richer problem-solving assessment."""
+        now = datetime.now(tz=timezone.utc)
+        last_30 = 0
+        last_90 = 0
+        accepted_count = 0
+        unique_titles = set()
+        languages = set()
+
+        for submission in recent_submissions:
+            if submission.get('status', '').lower() == 'accepted':
+                accepted_count += 1
+
+            if submission.get('title_slug'):
+                unique_titles.add(submission['title_slug'])
+
+            if submission.get('language'):
+                languages.add(submission['language'].lower())
+
+            submitted_at = submission.get('submitted_at')
+            if submitted_at:
+                try:
+                    submitted_dt = datetime.fromisoformat(submitted_at)
+                    age_days = (now - submitted_dt).days
+                    if age_days <= 30:
+                        last_30 += 1
+                    if age_days <= 90:
+                        last_90 += 1
+                except ValueError:
+                    pass
+
+        total_recent = len(recent_submissions)
+        recent_acceptance_ratio = (accepted_count / total_recent * 100) if total_recent else 0
+
+        return {
+            "recent_submission_events": total_recent,
+            "recent_unique_problems": len(unique_titles),
+            "recent_languages_used": sorted(languages),
+            "language_diversity_recent": len(languages),
+            "submissions_last_30_days": last_30,
+            "submissions_last_90_days": last_90,
+            "recent_acceptance_ratio": round(recent_acceptance_ratio, 2)
         }
 
     async def _fetch_via_scraping(self, username: str) -> Dict[str, Any]:
