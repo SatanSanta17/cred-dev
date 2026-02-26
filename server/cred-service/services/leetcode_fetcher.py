@@ -1,120 +1,76 @@
-"""LeetCode data fetching service using GraphQL API."""
+"""
+LeetCode Intelligence Fetcher v2
+GraphQL ingestion + structured telemetry extraction.
+
+NO scoring.
+NO report logic.
+Only raw intelligence signals.
+"""
 
 import httpx
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 
+
 class LeetCodeFetcher:
-    """Fetches LeetCode profile and problem-solving statistics using GraphQL API."""
 
     def __init__(self):
         self.base_url = "https://leetcode.com"
 
     async def fetch_user_data(self, username: str) -> Dict[str, Any]:
-        """
-        Fetch LeetCode user statistics using GraphQL API.
-
-        LeetCode provides a GraphQL API that is more reliable than web scraping.
-
-        Args:
-            username: LeetCode username
-
-        Returns:
-            dict: User statistics and problem-solving data
-        """
         try:
-            # Try GraphQL API first (more reliable)
-            result = await self._fetch_via_graphql(username)
-            if result and 'error' not in result:
-                return result
-
+            data = await self._fetch_via_graphql(username)
+            if data and "error" not in data:
+                return data
         except Exception as e:
             return {
                 "username": username,
-                "profile_url": f"{self.base_url}/u/{username}/",
-                "error": f"Failed to fetch LeetCode data: {str(e)}",
-                "stats": {}
+                "error": f"LeetCode ingestion failed: {str(e)}"
             }
 
     async def _fetch_via_graphql(self, username: str) -> Dict[str, Any]:
-        """
-        Fetch LeetCode data using GraphQL API.
-        This is the preferred method.
-        """
         graphql_url = "https://leetcode.com/graphql"
 
-        # GraphQL query to get user profile and submission stats
         query = """
         query getFullLeetCodeProfile($username: String!) {
             matchedUser(username: $username) {
                 username
-
                 profile {
-                realName
-                userAvatar
-                countryName
-                aboutMe
-                ranking
-                reputation
-                school
-                company
-                skillTags
-                starRating
+                    realName
+                    userAvatar
+                    countryName
+                    aboutMe
+                    ranking
+                    reputation
+                    school
+                    company
+                    skillTags
+                    starRating
                 }
-
                 submitStats {
-                acSubmissionNum {
-                    difficulty
-                    count
+                    acSubmissionNum { difficulty count }
+                    totalSubmissionNum { difficulty count submissions }
                 }
-                totalSubmissionNum {
-                    difficulty
-                    count
-                    submissions
-                }
-                }
-
                 tagProblemCounts {
-                advanced {
-                    tagName
-                    tagSlug
-                    problemsSolved
+                    advanced { tagName problemsSolved }
+                    intermediate { tagName problemsSolved }
+                    fundamental { tagName problemsSolved }
                 }
-                intermediate {
-                    tagName
-                    tagSlug
-                    problemsSolved
-                }
-                fundamental {
-                    tagName
-                    tagSlug
-                    problemsSolved
-                }
-                }
-
                 userCalendar {
-                activeYears
-                streak
-                totalActiveDays
-                submissionCalendar
+                    activeYears
+                    streak
+                    totalActiveDays
+                    submissionCalendar
                 }
-
                 badges {
-                id
-                displayName
-                icon
-                creationDate
-                }
-
-                upcomingBadges {
-                name
-                icon
-                progress
+                    id
+                    displayName
+                    icon
+                    creationDate
                 }
             }
 
             recentSubmissionList(username: $username, limit: 100) {
-                id
                 title
                 titleSlug
                 statusDisplay
@@ -130,177 +86,175 @@ class LeetCodeFetcher:
             }
 
             userContestRankingHistory(username: $username) {
-                contest {
-                title
-                startTime
-                }
+                contest { startTime }
                 rating
                 ranking
-                trendDirection
             }
         }
         """
 
-        payload = {
-            "query": query,
-            "variables": {"username": username},
-            # "operationName": "userProfile"
-        }
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(graphql_url, json={
+                "query": query,
+                "variables": {"username": username}
+            })
 
-        async with httpx.AsyncClient(
-            headers={
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://leetcode.com/',
-                'Origin': 'https://leetcode.com'
-            },
-            timeout=30
-        ) as client:
-            try:
-                response = await client.post(graphql_url, json=payload)
+            if response.status_code != 200:
+                return {"error": "GraphQL request failed"}
 
-                if response.status_code == 200:
-                    json_response = response.json()
+            json_data = response.json().get("data", {})
+            return self._parse_graphql_response(json_data, username)
 
-                    if 'data' in json_response:
-                        data = json_response['data']
-                        if data:
-                            return self._parse_graphql_response(data, username)
-                        else:
-                            return {
-                                "username": username,
-                                "profile_url": f"{self.base_url}/u/{username}/",
-                                "error": "User not found",
-                                "stats": {}
-                            }
-                    else:
-                        return {
-                            "username": username,
-                            "profile_url": f"{self.base_url}/u/{username}/",
-                            "error": "Invalid GraphQL response",
-                            "stats": {}
-                        }
+    # -------------------------
+    # PARSING
+    # -------------------------
 
-                elif response.status_code == 403:
-                    return {
-                        "username": username,
-                        "profile_url": f"{self.base_url}/u/{username}/",
-                        "error": "GraphQL API blocked (403 Forbidden)",
-                        "stats": {},
-                        "fallback_available": True
-                    }
-                else:
-                    return {
-                        "username": username,
-                        "profile_url": f"{self.base_url}/u/{username}/",
-                        "error": f"GraphQL API error (status: {response.status_code})",
-                        "stats": {},
-                        "fallback_available": True
-                    }
+    def _parse_graphql_response(self, data: Dict[str, Any], username: str):
 
-            except Exception as e:
-                return {
-                    "username": username,
-                    "profile_url": f"{self.base_url}/u/{username}/",
-                    "error": f"GraphQL request failed: {str(e)}",
-                    "stats": {},
-                    "fallback_available": True
-                }
+        user = data.get("matchedUser", {})
+        submit_stats = user.get("submitStats", {})
 
-    def _parse_graphql_response(self, data: Dict[str, Any], username: str) -> Dict[str, Any]:
-        """Parse the GraphQL response into our standardized format."""
-        matched_user = data.get('matchedUser', {})
+        ac = submit_stats.get("acSubmissionNum", [])
+        total = submit_stats.get("totalSubmissionNum", [])
 
-        # Extract submission counts using that find accuracy rate.
-        submit_stats = matched_user.get('submitStats', {})
-        total_solved = submit_stats.get('acSubmissionNum', [])[0].get('count', 0)
-        total_submissions = submit_stats.get('totalSubmissionNum', [])[0].get('count', 0)
-        acceptance_rate = (total_solved / total_submissions * 100) if total_submissions > 0 else 0
-        submit_stats['acceptance_rate'] = acceptance_rate
+        total_solved = self._extract_all_bucket(ac, "count")
+        total_submissions = self._extract_all_bucket(total, "submissions")
 
+        acceptance_rate = (
+            total_solved / total_submissions * 100
+            if total_submissions > 0 else 0
+        )
 
-
-        recent_submission_list = data.get('recentSubmissionList', [])
-        recent_submissions = self._parse_recent_submissions(recent_submission_list)
-        recent_metrics = self._build_recent_activity_metrics(recent_submissions)
-
-        user_contest_ranking = data.get('userContestRanking', {})
-        user_contest_ranking_history = data.get('userContestRankingHistory', [])
-
+        recent_submissions = self._parse_recent_submissions(
+            data.get("recentSubmissionList", [])
+        )
 
         return {
-            "data": {
-                "matched_user": matched_user,
-                "recent_submission_list": recent_submission_list,
-                "recent_activity_metrics": recent_metrics,
-                "user_contest_ranking": user_contest_ranking,
-                "user_contest_ranking_history": user_contest_ranking_history
+            "profile_identity": self._extract_profile_identity(user),
+            "problem_solving_stats": {
+                "total_solved": total_solved,
+                "acceptance_rate": round(acceptance_rate, 2),
+                "difficulty_distribution": self._difficulty_breakdown(ac),
             },
-            "data_source": "graphql_api"
+            "topic_strengths": self._extract_topic_strengths(user),
+            "contest_intelligence": self._extract_contest_signals(data),
+            "consistency_signals": self._extract_calendar_signals(user),
+            "recent_activity": self._build_recent_activity_metrics(recent_submissions),
+            "badges": user.get("badges", []),
+            "data_source": "leetcode_graphql"
         }
 
-    def _parse_recent_submissions(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Normalize recent submission events from GraphQL response."""
-        recent_submissions = []
-        for submission in rows[:20]:
-            timestamp_raw = submission.get('timestamp', '')
-            submitted_at = ''
-            try:
-                if timestamp_raw:
-                    submitted_at = datetime.fromtimestamp(int(timestamp_raw), tz=timezone.utc).isoformat()
-            except (ValueError, TypeError, OSError):
-                submitted_at = ''
+    # -------------------------
+    # EXTRACTION HELPERS
+    # -------------------------
 
-            recent_submissions.append({
-                "title": submission.get('title', ''),
-                "title_slug": submission.get('titleSlug', ''),
-                "status": submission.get('statusDisplay', ''),
-                "language": submission.get('lang', ''),
-                "submitted_at": submitted_at,
-                "timestamp": timestamp_raw
+    def _extract_all_bucket(self, rows, key):
+        for r in rows:
+            if r.get("difficulty") == "All":
+                return r.get(key, 0)
+        return 0
+
+    def _difficulty_breakdown(self, rows):
+        result = {"easy": 0, "medium": 0, "hard": 0}
+        for r in rows:
+            diff = r.get("difficulty", "").lower()
+            if diff in result:
+                result[diff] = r.get("count", 0)
+        return result
+
+    def _extract_profile_identity(self, user):
+        profile = user.get("profile", {})
+        return {
+            "username": user.get("username"),
+            "name": profile.get("realName"),
+            "avatar": profile.get("userAvatar"),
+            "country": profile.get("countryName"),
+            "ranking": profile.get("ranking"),
+            "reputation": profile.get("reputation"),
+            "school": profile.get("school"),
+            "company": profile.get("company"),
+            "star_rating": profile.get("starRating"),
+            "bio": profile.get("aboutMe"),
+            "skill_tags": profile.get("skillTags", [])
+        }
+
+    def _extract_topic_strengths(self, user):
+        topic_data = user.get("tagProblemCounts", {})
+        return {
+            "advanced": topic_data.get("advanced", []),
+            "intermediate": topic_data.get("intermediate", []),
+            "fundamental": topic_data.get("fundamental", [])
+        }
+
+    def _extract_contest_signals(self, data):
+        ranking = data.get("userContestRanking", {})
+        history = data.get("userContestRankingHistory", [])
+
+        rating_trend = []
+        for entry in history:
+            rating_trend.append({
+                "rating": entry.get("rating"),
+                "ranking": entry.get("ranking"),
+                "time": entry.get("contest", {}).get("startTime")
             })
-        return recent_submissions
 
-    def _build_recent_activity_metrics(self, recent_submissions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Generate recent activity indicators for richer problem-solving assessment."""
+        return {
+            "current_rating": ranking.get("rating"),
+            "global_ranking": ranking.get("globalRanking"),
+            "contests_attended": ranking.get("attendedContestsCount"),
+            "rating_history": rating_trend
+        }
+
+    def _extract_calendar_signals(self, user):
+        calendar = user.get("userCalendar", {})
+        return {
+            "active_years": calendar.get("activeYears"),
+            "total_active_days": calendar.get("totalActiveDays"),
+            "current_streak": calendar.get("streak"),
+            "submission_calendar": calendar.get("submissionCalendar")
+        }
+
+    def _parse_recent_submissions(self, rows: List[Dict[str, Any]]):
+        parsed = []
+        for s in rows:
+            timestamp = s.get("timestamp")
+            dt = ""
+            if timestamp:
+                dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc).isoformat()
+
+            parsed.append({
+                "title": s.get("title"),
+                "slug": s.get("titleSlug"),
+                "status": s.get("statusDisplay"),
+                "language": s.get("lang"),
+                "submitted_at": dt
+            })
+        return parsed
+
+    def _build_recent_activity_metrics(self, recent_submissions):
         now = datetime.now(tz=timezone.utc)
-        last_30 = 0
-        last_90 = 0
-        accepted_count = 0
-        unique_titles = set()
+
+        last_30 = last_90 = accepted = 0
         languages = set()
 
-        for submission in recent_submissions:
-            if submission.get('status', '').lower() == 'accepted':
-                accepted_count += 1
+        for s in recent_submissions:
+            if s["status"].lower() == "accepted":
+                accepted += 1
 
-            if submission.get('title_slug'):
-                unique_titles.add(submission['title_slug'])
+            if s["language"]:
+                languages.add(s["language"].lower())
 
-            if submission.get('language'):
-                languages.add(submission['language'].lower())
-
-            submitted_at = submission.get('submitted_at')
-            if submitted_at:
-                try:
-                    submitted_dt = datetime.fromisoformat(submitted_at)
-                    age_days = (now - submitted_dt).days
-                    if age_days <= 30:
-                        last_30 += 1
-                    if age_days <= 90:
-                        last_90 += 1
-                except ValueError:
-                    pass
-
-        total_recent = len(recent_submissions)
-        recent_acceptance_ratio = (accepted_count / total_recent * 100) if total_recent else 0
+            if s["submitted_at"]:
+                days = (now - datetime.fromisoformat(s["submitted_at"])).days
+                if days <= 30:
+                    last_30 += 1
+                if days <= 90:
+                    last_90 += 1
 
         return {
-            "recent_submission_events": total_recent,
-            "recent_unique_problems": len(unique_titles),
-            "recent_languages_used": sorted(languages),
-            "language_diversity_recent": len(languages),
+            "recent_submissions": len(recent_submissions),
+            "accepted_recent": accepted,
+            "language_diversity": len(languages),
             "submissions_last_30_days": last_30,
-            "submissions_last_90_days": last_90,
-            "recent_acceptance_ratio": round(recent_acceptance_ratio, 2)
+            "submissions_last_90_days": last_90
         }

@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
-from .routes import analyze
-
+from .routes import extract
+from .routes import generate
 app = FastAPI(
-    title="CredDev Analysis Service",
-    description="Fact-checking and report generation for developer credibility",
-    version="0.1.0"
+    title="CredDev Skill Intelligence Engine",
+    description="Two-phase developer credibility analysis: extract raw data, generate intelligence reports",
+    version="1.0.0"
 )
 
 # CORS
@@ -18,8 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routes
-app.include_router(analyze.router, prefix="/api/v1", tags=["analysis"])
+# Routes - Two-phase architecture
+app.include_router(extract.router, prefix="/api/v1", tags=["extraction"])
+app.include_router(generate.router, prefix="/api/v1", tags=["generation"])
 
 @app.get("/health")
 async def health_check():
