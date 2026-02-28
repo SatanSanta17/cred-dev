@@ -1,13 +1,65 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
-from ..database import get_db, AnalysisJob
-from services.pipeline_runner import CandidateAnalysisPipeline
-from services.credibility_engine import CredibilityEngine
-from services.intelligence_engine import IntelligenceEngine
+from ..database import get_db, AnalysisJob, SessionLocal
+from services.report_generator import ReportGenerator
 from services.raw_data_loader import RawDataLoader
 from services.report_storage import ReportStorageService
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _run_generation_pipeline(job_id: str):
+    """
+    Pipeline:
+    1. Load raw platform data
+    2. Feed raw data directly to LLM — it handles credibility, company research, analysis, everything
+    3. Store raw data + reports
+
+    No intermediate engines, no web scraping, no pre-processing.
+    The LLM sees all raw signals and does all the reasoning using its own knowledge.
+    """
+    db = SessionLocal()
+
+    try:
+        job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+        if not job:
+            return
+
+        # Phase 1: Load raw platform data
+        loader = RawDataLoader(db)
+        raw_data = loader.load_job_raw_data(job_id)
+
+        # Phase 2: LLM generates everything — credibility, company assessment, analysis, reports
+        report_gen = ReportGenerator()
+        reports = report_gen.generate_reports(raw_data)
+
+        # Phase 3: Store everything
+        storage = ReportStorageService()
+        storage.save_reports(job_id, {
+            "raw_data": raw_data,
+            "reports": reports,
+        })
+
+        job.status = "completed"
+        job.updated_at = datetime.utcnow()
+        db.commit()
+
+    except Exception as e:
+        logger.error(f"Generation pipeline failed for {job_id}: {e}", exc_info=True)
+        job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+        if job:
+            job.status = "failed"
+            job.error_message = str(e)
+            job.updated_at = datetime.utcnow()
+            db.commit()
+
+    finally:
+        db.close()
+
 
 @router.post("/generate/{job_id}")
 async def generate_reports(
@@ -17,9 +69,7 @@ async def generate_reports(
 ):
     """
     Generate intelligence reports from previously extracted raw data.
-
-    Flow:
-    extracted → generating → completed
+    Flow: extracted -> generating -> completed
     """
 
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
@@ -27,11 +77,10 @@ async def generate_reports(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Guard 1: extraction must be completed
     if job.status != "extracted":
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot generate reports. Current job status: {job.status}"
+            detail=f"Cannot generate reports. Current job status: {job.status}. Must be 'extracted'."
         )
 
     # Move job to generating state
@@ -39,60 +88,43 @@ async def generate_reports(
     job.updated_at = datetime.utcnow()
     db.commit()
 
-    loader = RawDataLoader(db)
-    raw_data = loader.load_job_raw_data(job_id)
-    if not raw_data:
-        raise HTTPException(status_code=404, detail="Raw data not found")
-
-    resume_claims = raw_data["resume"].get("claims", {})
-    github_raw = raw_data["github"]
-    leetcode_raw = raw_data["leetcode"]
-
-    credibility_output = CredibilityEngine().evaluate(
-        resume_claims,
-        github_raw,
-        leetcode_raw
-    )
-
-    intelligence_output = IntelligenceEngine().generate_intelligence(
-        github_raw,
-        leetcode_raw,
-        resume_claims,
-        credibility_output
-    ) 
-
-    pipeline = CandidateAnalysisPipeline()
-    try:
-        result = pipeline.run_analysis(intelligence_output, credibility_output)
-
-        ReportStorageService().save_reports(job_id, result)
-        job.status = "completed"
-        job.updated_at = datetime.utcnow()
-        db.commit()
-        # background_tasks.add_task(
-        #     pipeline_runner.run_generation_pipeline,
-        #     job_id=job_id
-        # )
-
-    except Exception as e:
-        job.status = "failed"
-        job.error_message = str(e)
-        job.updated_at = datetime.utcnow()
-        db.commit()
+    # Run generation in background (non-blocking)
+    background_tasks.add_task(_run_generation_pipeline, job_id)
 
     return {
         "job_id": job_id,
         "status": "generating",
-        "message": "Intelligence generation started. Check status at GET /generate/{job_id}"
+        "message": "Intelligence generation started. Poll GET /api/v1/generate/{job_id} for results."
     }
+
 
 @router.get("/generate/{job_id}")
 async def get_generation_status(job_id: str, db: Session = Depends(get_db)):
+    """Get report generation status and results."""
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
 
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # return report
-    reports = ReportStorageService().get_reports(job_id)
-    return reports
+    if job.status == "completed":
+        reports = ReportStorageService().get_reports(job_id)
+        return {
+            "job_id": job_id,
+            "status": "completed",
+            "candidate_name": job.candidate_name,
+            "reports": reports
+        }
+
+    elif job.status == "failed":
+        return {
+            "job_id": job_id,
+            "status": "failed",
+            "error": job.error_message
+        }
+
+    else:
+        return {
+            "job_id": job_id,
+            "status": job.status,
+            "message": f"Current status: {job.status}. Poll again for updates."
+        }
