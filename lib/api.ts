@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_CREDDEV_API_URL || 'http://localhost:8000'
+const API_BASE = process.env.NEXT_PUBLIC_CRED_SERVICE_API_URL || 'http://localhost:8000'
 
 export interface ExtractionResponse {
   job_id: string
