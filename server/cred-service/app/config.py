@@ -27,9 +27,7 @@ class Settings(BaseSettings):
 
     # App settings
     debug: bool = False
-    # should i add my production url here? 
-    production_url: Optional[str] = None
-    cors_origins: list = ["http://localhost:3000",production_url]
+    cors_origins: list = ["http://localhost:3000", "https://cred-dev17.vercel.app"]
 
     class Config:
         # Priority: cred-service/.env first, then root .env
