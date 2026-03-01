@@ -5,6 +5,7 @@ Uses SMTP + reportlab for PDF generation.
 
 import io
 import re
+import socket
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -410,9 +411,11 @@ class EmailService:
             attachment.add_header("Content-Disposition", "attachment", filename=filename)
             msg.attach(attachment)
 
-        # Send
+        # Send — force IPv4 to avoid Railway IPv6 issues
         try:
-            with smtplib.SMTP(self.host, self.port) as server:
+            # Resolve hostname to IPv4 explicitly
+            ipv4_addr = socket.getaddrinfo(self.host, self.port, socket.AF_INET)[0][4][0]
+            with smtplib.SMTP(ipv4_addr, self.port) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
