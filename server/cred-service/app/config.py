@@ -17,13 +17,17 @@ class Settings(BaseSettings):
     cred_service_supabase_service_role_key: Optional[str] = None
     cred_service_supabase_service_key: Optional[str] = None
 
-    # Email (SMTP)
+    # Email (SMTP for local dev, Resend for production)
     smtp_host: Optional[str] = None
     smtp_port: int = 587
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_from_email: Optional[str] = None  # defaults to smtp_user if not set
     smtp_from_name: str = "CredDev"
+
+    # Resend (production email)
+    resend_api_key: Optional[str] = None
+    resend_from_email: str = "CredDev <onboarding@resend.dev>"
 
     # App settings
     debug: bool = False

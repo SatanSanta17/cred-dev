@@ -1,10 +1,11 @@
 """
 Email service for sending generated reports as PDF attachments.
-Uses SMTP + reportlab for PDF generation.
+Uses Resend (production) or SMTP (local dev) + reportlab for PDF generation.
 """
 
 import io
 import re
+import base64
 import socket
 import logging
 import smtplib
@@ -331,8 +332,12 @@ def _build_email_html(candidate_name: str, report_names: list) -> str:
     """
 
 
-class EmailService:
-    """SMTP-based email service with PDF report attachments."""
+# ---------------------------------------------------------------------------
+# SMTP Email Service (local dev)
+# ---------------------------------------------------------------------------
+
+class SMTPEmailService:
+    """SMTP-based email service for local development."""
 
     def __init__(self):
         self.host = settings.smtp_host
@@ -358,30 +363,9 @@ class EmailService:
             )
             return
 
-        # Generate PDF for each report
-        attachments = []
-        report_names = []
-        safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", candidate_name)
-
-        for report_key, content in reports.items():
-            if not content:
-                continue
-
-            meta = REPORT_META.get(report_key, {})
-            filename = f"{meta.get('filename', report_key)}_{safe_name}.pdf"
-            title = meta.get("title", report_key.replace("_", " ").title())
-
-            try:
-                pdf_bytes = generate_report_pdf(candidate_name, report_key, content)
-                attachments.append((filename, pdf_bytes))
-                report_names.append(title)
-                logger.info(f"[EMAIL] Generated PDF: {filename} ({len(pdf_bytes)} bytes)")
-            except Exception as e:
-                logger.error(f"[EMAIL] Failed to generate PDF for {report_key}: {e}")
-                continue
-
+        # Generate PDFs
+        attachments, report_names = _generate_pdf_attachments(candidate_name, reports)
         if not attachments:
-            logger.error(f"[EMAIL] No PDFs generated for {candidate_name} — skipping email")
             return
 
         # Build email
@@ -411,11 +395,9 @@ class EmailService:
             attachment.add_header("Content-Disposition", "attachment", filename=filename)
             msg.attach(attachment)
 
-        # Send — force IPv4 to avoid Railway IPv6 issues
+        # Send
         try:
-            # Resolve hostname to IPv4 explicitly
-            ipv4_addr = socket.getaddrinfo(self.host, self.port, socket.AF_INET)[0][4][0]
-            with smtplib.SMTP(ipv4_addr, self.port) as server:
+            with smtplib.SMTP(self.host, self.port) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -423,14 +405,124 @@ class EmailService:
                 server.sendmail(self.from_email, to_email, msg.as_string())
 
             logger.info(
-                f"[EMAIL] Sent {len(attachments)} PDF reports to {to_email} for {candidate_name}"
+                f"[EMAIL] SMTP sent {len(attachments)} PDF reports to {to_email} for {candidate_name}"
             )
 
         except Exception as e:
-            logger.error(f"[EMAIL] Failed to send to {to_email}: {e}")
+            logger.error(f"[EMAIL] SMTP failed to send to {to_email}: {e}")
             raise
 
 
-def get_email_service() -> EmailService:
-    """Factory. Returns the configured email service."""
-    return EmailService()
+# ---------------------------------------------------------------------------
+# Resend Email Service (production)
+# ---------------------------------------------------------------------------
+
+class ResendEmailService:
+    """Resend API-based email service for production (works over HTTPS)."""
+
+    def __init__(self):
+        import resend
+        resend.api_key = settings.resend_api_key
+        self.resend = resend
+        self.from_email = settings.resend_from_email
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(settings.resend_api_key)
+
+    def send_reports(self, to_email: str, candidate_name: str, reports: Dict[str, str]):
+        if not to_email:
+            logger.info(f"No email provided for {candidate_name} — skipping")
+            return
+
+        if not self.is_configured:
+            logger.warning(
+                f"[EMAIL] Resend not configured — would have sent reports to {to_email}. "
+                f"Set RESEND_API_KEY in env to enable."
+            )
+            return
+
+        # Generate PDFs
+        attachments, report_names = _generate_pdf_attachments(candidate_name, reports)
+        if not attachments:
+            return
+
+        # Build email
+        subject = f"Your CredDev Credibility Reports — {candidate_name}"
+        html_body = _build_email_html(candidate_name, report_names)
+
+        # Resend attachments format: list of dicts with filename + base64 content
+        resend_attachments = [
+            {
+                "filename": filename,
+                "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+            }
+            for filename, pdf_bytes in attachments
+        ]
+
+        try:
+            params = {
+                "from": self.from_email,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+                "attachments": resend_attachments,
+            }
+            result = self.resend.Emails.send(params)
+            logger.info(
+                f"[EMAIL] Resend sent {len(attachments)} PDF reports to {to_email} "
+                f"for {candidate_name} (id={result.get('id', 'unknown')})"
+            )
+
+        except Exception as e:
+            logger.error(f"[EMAIL] Resend failed to send to {to_email}: {e}")
+            raise
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+def _generate_pdf_attachments(candidate_name: str, reports: Dict[str, str]):
+    """Generate PDF files for all reports. Returns (attachments, report_names)."""
+    attachments = []
+    report_names = []
+    safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", candidate_name)
+
+    for report_key, content in reports.items():
+        if not content:
+            continue
+
+        meta = REPORT_META.get(report_key, {})
+        filename = f"{meta.get('filename', report_key)}_{safe_name}.pdf"
+        title = meta.get("title", report_key.replace("_", " ").title())
+
+        try:
+            pdf_bytes = generate_report_pdf(candidate_name, report_key, content)
+            attachments.append((filename, pdf_bytes))
+            report_names.append(title)
+            logger.info(f"[EMAIL] Generated PDF: {filename} ({len(pdf_bytes)} bytes)")
+        except Exception as e:
+            logger.error(f"[EMAIL] Failed to generate PDF for {report_key}: {e}")
+            continue
+
+    if not attachments:
+        logger.error(f"[EMAIL] No PDFs generated for {candidate_name} — skipping email")
+
+    return attachments, report_names
+
+
+# ---------------------------------------------------------------------------
+# Factory — auto-selects Resend (prod) or SMTP (dev)
+# ---------------------------------------------------------------------------
+
+def get_email_service():
+    """Return the appropriate email service based on config.
+    Resend takes priority (production). Falls back to SMTP (local dev).
+    """
+    if settings.resend_api_key:
+        logger.info("[EMAIL] Using Resend email service")
+        return ResendEmailService()
+    else:
+        logger.info("[EMAIL] Using SMTP email service (local dev)")
+        return SMTPEmailService()
