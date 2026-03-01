@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Brevo (production email — recommended)
     brevo_api_key: Optional[str] = None
-    brevo_from_email: str = "creddev.reports@gmail.com"
+    brevo_from_email: str = "cred.dev17@gmail.com"
     brevo_from_name: str = "CredDev"
 
     # Resend (deprecated — kept for future use with custom domain)
