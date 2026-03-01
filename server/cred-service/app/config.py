@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     supabase_service_role_key: Optional[str] = None
     supabase_service_key: Optional[str] = None
 
+    # Email (SMTP)
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None  # defaults to smtp_user if not set
+    smtp_from_name: str = "CredDev"
+
     # App settings
     debug: bool = False
     cors_origins: list = ["http://localhost:3000"]

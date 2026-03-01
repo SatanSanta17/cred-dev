@@ -20,6 +20,7 @@ class AnalysisJob(Base):
 
     id = Column(String, primary_key=True)
     candidate_name = Column(String, nullable=True, default="Anonymous Candidate")
+    candidate_email = Column(String, nullable=True)
     user_id = Column(String, nullable=True)
     status = Column(String, default="pending")
     created_at = Column(DateTime)

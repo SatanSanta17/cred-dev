@@ -3,13 +3,10 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { GradientText } from '@/components/shared/gradient-text'
-import { Github, Twitter, Linkedin, Mail, ArrowRight } from 'lucide-react'
+import { Mail, ArrowRight, Zap } from 'lucide-react'
+import Link from 'next/link'
 
 export function Footer() {
-  const scrollToWaitlist = () => {
-    document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   const currentYear = new Date().getFullYear()
 
   return (
@@ -28,16 +25,29 @@ export function Footer() {
               <GradientText>Developer Credibility</GradientText>?
             </h2>
             <p className="text-lg sm:text-xl text-gray-400 mb-8 px-4">
-              Join the future of developer verification
+              Get your AI-powered credibility report in minutes
             </p>
-            <Button 
-              size="lg" 
-              onClick={scrollToWaitlist}
-              className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
-            >
-              Join Waitlist Now
-              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/try">
+                <Button
+                  size="lg"
+                  className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
+                >
+                  <Zap className="mr-2 w-5 h-5" />
+                  Try Now — Free
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/waitlist">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-lg px-8 py-6 h-auto border-gray-700 hover:bg-gray-800"
+                >
+                  Join Waitlist
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -54,32 +64,6 @@ export function Footer() {
               <p className="text-gray-400 mb-4 max-w-md">
                 The credibility layer for developers. Verify skills, build trust, and get discovered.
               </p>
-              {/* <div className="flex gap-4">
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
-                >
-                  <Github className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
-                >
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors"
-                >
-                  <Linkedin className="w-5 h-5" />
-                </a>
-              </div> */}
             </div>
 
             {/* Product */}
@@ -87,25 +71,25 @@ export function Footer() {
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2">
                 <li>
+                  <Link href="/try" className="text-gray-400 hover:text-white transition-colors">
+                    Try Now
+                  </Link>
+                </li>
+                <li>
                   <a href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">
                     How It Works
                   </a>
                 </li>
-                {/* <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
-                    Pricing
-                  </a>
-                </li> */}
                 <li>
                   <a href="#sample-output" className="text-gray-400 hover:text-white transition-colors">
                     Features
                   </a>
                 </li>
-                {/* <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
-                    Roadmap
-                  </a>
-                </li> */}
+                <li>
+                  <Link href="/waitlist" className="text-gray-400 hover:text-white transition-colors">
+                    Waitlist
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -118,16 +102,6 @@ export function Footer() {
                     About
                   </a>
                 </li>
-                {/* <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#waitlist" className="text-gray-400 hover:text-white transition-colors">
-                    Careers
-                  </a>
-                </li> */}
                 <li>
                   <a href="mailto:cred.dev17@gmail.com" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
                     <Mail className="w-4 h-4" />
@@ -141,19 +115,8 @@ export function Footer() {
           {/* Bottom Bar */}
           <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              © {currentYear} CredDev. All rights reserved.
+              &copy; {currentYear} CredDev. All rights reserved.
             </p>
-            {/* <div className="flex gap-6 text-sm">
-              <a href="#" className="text-gray-500 hover:text-white transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-gray-500 hover:text-white transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="text-gray-500 hover:text-white transition-colors">
-                Cookie Policy
-              </a>
-            </div> */}
           </div>
         </div>
       </div>

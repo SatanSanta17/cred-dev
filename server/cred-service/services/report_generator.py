@@ -26,50 +26,68 @@ logger = logging.getLogger(__name__)
 # These are immutable rules the LLM must follow regardless of report type.
 # =========================================
 
-GUARDRAILS = """You are a developer credibility verification engine. You receive raw data from GitHub (GraphQL), LeetCode (GraphQL), and a resume text. Your job is to reason over this data and produce reports.
+GUARDRAILS_BASE = """You are a developer credibility verification engine. You receive raw data from GitHub (GraphQL), LeetCode (GraphQL), and a resume text. Your job is to reason over this data and produce reports.
 
 IMMUTABLE RULES — violating any of these is a critical failure:
 
-1. CITATION RULE
-   Every factual statement you make must be followed by the source in parentheses.
-   Format: (Source: <platform> > <field path>)
-   Examples:
-     - "42 public repositories" (Source: GitHub > repositories.totalCount)
-     - "555 problems solved" (Source: LeetCode > matchedUser.submitStats.acSubmissionNum[All].count)
-     - "Worked at InMobi" (Source: Resume text)
-   If you cannot cite a source from the raw data, do not make the statement.
-
-2. VERIFICATION RULE
+1. VERIFICATION RULE
    A skill is VERIFIED only if you can point to explicit evidence in the raw data.
    - For languages: must appear in GitHub repo language nodes OR LeetCode submission lang fields
    - For frameworks/libraries (React, Node, MongoDB, etc.): must appear in repo descriptions, repo names, or repositoryTopics in the raw GitHub data
    - If you cannot find explicit evidence, mark it UNVERIFIED — do not guess or infer
    - Resume text mentioning a skill is a CLAIM, not verification
 
-3. NO HALLUCINATION RULE
+2. NO HALLUCINATION RULE
    Do not infer, assume, or extrapolate beyond what is explicitly in the raw data.
    If data is missing or ambiguous, say "data not available" — never fill the gap with assumptions.
 
-4. DATE AWARENESS RULE
+3. DATE AWARENESS RULE
    Today's date is {today}. Use this when interpreting employment timelines.
    - Calculate experience duration from actual start/end dates in the resume
    - A future start date in the resume is a discrepancy — flag it
    - Do not use any pre-parsed "experience_years" field — derive it yourself from date ranges
 
-5. CROSS-PLATFORM ACTIVITY RULE
+4. CROSS-PLATFORM ACTIVITY RULE
    Never assess a candidate's activity or consistency using only one platform.
    Always combine signals: GitHub commits + LeetCode submissions together.
    A developer may be inactive on LeetCode but actively pushing to GitHub — that is NOT low activity.
 
-6. COMPANY SOURCE RULE
+5. COMPANY SOURCE RULE
    Professional work history comes from the RESUME TEXT only.
    The GitHub "company" field is informal and self-reported — ignore it for professional assessment.
    Use your training knowledge to assess company reputation and domain.
 
-7. CLAIMS vs PROOF RULE
+6. CLAIMS vs PROOF RULE
    Resume bullet points are claims. Platform data is evidence.
    Treat resume metrics (e.g. "boosted engagement by 27%") as unverified claims unless corroborated by platform data.
-   Label them clearly as: [CLAIMED, NOT PLATFORM-VERIFIED]"""
+   Label them clearly as: [CLAIMED, NOT PLATFORM-VERIFIED]
+
+7. OUTPUT FORMAT RULE
+   You are generating a static document, NOT having a conversation.
+   Do NOT include follow-up questions, offers to help, or conversational sign-offs at the end of the report.
+   Do NOT write things like "If you want, I can..." or "Let me know if..." or "Would you like me to...".
+   The report ends after the final section — nothing else."""
+
+# Citation mode appended to GUARDRAILS_BASE depending on report type
+CITATION_EXTENSIVE = """
+
+8. CITATION RULE (ACTIVE FOR THIS REPORT)
+   Every factual statement you make must be followed by the source in parentheses.
+   Format: (Source: <platform> > <field path>)
+   Examples:
+     - "42 public repositories" (Source: GitHub > repositories.totalCount)
+     - "555 problems solved" (Source: LeetCode > matchedUser.submitStats.acSubmissionNum[All].count)
+     - "Worked at InMobi" (Source: Resume text)
+   If you cannot cite a source from the raw data, do not make the statement."""
+
+CITATION_NATURAL = """
+
+8. WRITING STYLE RULE (ACTIVE FOR THIS REPORT)
+   Write in clear, natural prose. Do NOT add inline citations like "(Source: ...)" after sentences.
+   Use specific numbers, repo names, and stats naturally in the text.
+   Example of GOOD writing: "With 42 public repositories and 555 LeetCode problems solved, the candidate shows strong breadth."
+   Example of BAD writing: "42 public repositories (Source: GitHub > repositories.totalCount) and 555 problems (Source: LeetCode > submitStats)."
+   Verification details and data sources go ONLY in the Verification Disclaimer section at the end of the report."""
 
 
 class ReportGenerator:
@@ -86,18 +104,26 @@ class ReportGenerator:
     # =========================================
 
     def generate_reports(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate all 3 reports in one call. Use individual methods for progress tracking."""
         context = self._build_llm_context(raw_data)
-        system = GUARDRAILS.format(today=date.today().isoformat())
 
-        extensive = self._generate_extensive_report(system, context)
-        developer = self._generate_developer_insight(system, context)
-        recruiter = self._generate_recruiter_insight(system, context)
+        extensive = self._call_llm(self._build_system_message("extensive"), self._extensive_prompt(context))
+        developer = self._call_llm(self._build_system_message("developer"), self._developer_prompt(context))
+        recruiter = self._call_llm(self._build_system_message("recruiter"), self._recruiter_prompt(context))
 
         return {
             "extensive_report": extensive,
             "developer_insight": developer,
             "recruiter_insight": recruiter,
         }
+
+    def _build_system_message(self, report_type: str = "extensive") -> str:
+        """Build system message with guardrails + citation mode for the report type."""
+        base = GUARDRAILS_BASE.format(today=date.today().isoformat())
+        if report_type == "extensive":
+            return base + CITATION_EXTENSIVE
+        else:
+            return base + CITATION_NATURAL
 
     # =========================================
     # CONTEXT BUILDER
@@ -141,8 +167,8 @@ class ReportGenerator:
     # Everything goes here. No omissions. No soft-pedalling.
     # =========================================
 
-    def _generate_extensive_report(self, system: str, context: str) -> str:
-        prompt = f"""Produce a comprehensive technical intelligence report on this developer.
+    def _extensive_prompt(self, context: str) -> str:
+        return f"""Produce a comprehensive technical intelligence report on this developer.
 
 This is the data room — every signal must be surfaced, every claim cross-checked, every finding cited.
 Be analytical, direct, and precise. Do not summarise — go deep on every section.
@@ -200,8 +226,6 @@ Date inconsistencies (future dates, gaps) must be flagged.
 ### 9. Final Technical Positioning
 Level, primary verified strengths, significant gaps, overall signal quality."""
 
-        return self._call_llm(system, prompt)
-
     # =========================================
     # DEVELOPER INSIGHT
     # Purpose: growth plan — what to improve and how.
@@ -209,8 +233,8 @@ Level, primary verified strengths, significant gaps, overall signal quality."""
     # Tone: direct mentor, no flattery, specific actions.
     # =========================================
 
-    def _generate_developer_insight(self, system: str, context: str) -> str:
-        prompt = f"""Produce a focused growth report for this developer.
+    def _developer_prompt(self, context: str) -> str:
+        return f"""Produce a focused growth report for this developer.
 
 Your only goal: tell them exactly what to improve and how. No praise, no career fluff.
 Write in clear, natural prose — do NOT add inline citations like "(Source: ...)" after every sentence.
@@ -256,8 +280,6 @@ End the report with this section. Write it as follows:
 
 **Resume Metrics** (e.g. "improved performance by X%", "boosted engagement by Y%"): These are candidate-stated figures and have not been independently verified through platform data."""
 
-        return self._call_llm(system, prompt)
-
     # =========================================
     # RECRUITER INSIGHT
     # Purpose: hiring decision support — verdict-first, verified-only.
@@ -265,8 +287,8 @@ End the report with this section. Write it as follows:
     # No interview questions. No improvement plans. Decision signals only.
     # =========================================
 
-    def _generate_recruiter_insight(self, system: str, context: str) -> str:
-        prompt = f"""Produce a hiring decision report for a technical recruiter.
+    def _recruiter_prompt(self, context: str) -> str:
+        return f"""Produce a hiring decision report for a technical recruiter.
 
 Your only goal: give the recruiter everything they need to make a confident hire/no-hire decision.
 Do not include interview questions or improvement suggestions — those are not a recruiter's job.
@@ -318,25 +340,27 @@ End the report with this section:
 
 **Resume Metrics** (e.g. "improved performance by X%", "boosted engagement by Y%"): These are candidate-stated figures and have not been independently verified through platform data."""
 
-        return self._call_llm(system, prompt)
-
     # =========================================
     # LLM CALL
     # Uses system + user message split so guardrails are in system role.
     # =========================================
 
     def _call_llm(self, system: str, prompt: str) -> str:
-        try:
-            response = self.client.responses.create(
-                model=self.model,
-                tools=[{"type": "web_search_preview"}],
-                tool_choice="auto",
-                input=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            return response.output_text
-        except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            return f"Report generation failed: {str(e)}"
+        """
+        Calls the LLM. Raises on failure — never returns error strings.
+        The caller (pipeline) is responsible for catching and marking the job as failed.
+        """
+        response = self.client.responses.create(
+            model=self.model,
+            tools=[{"type": "web_search_preview"}],
+            tool_choice="auto",
+            input=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        if not response.output_text:
+            raise ValueError("LLM returned empty response")
+
+        return response.output_text

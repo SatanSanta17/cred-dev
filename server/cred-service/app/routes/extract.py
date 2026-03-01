@@ -18,6 +18,7 @@ async def extract_raw_data(
     leetcode_url: Optional[str] = Form(None),
     linkedin_url: Optional[str] = Form(None),
     candidate_name: Optional[str] = Form("Anonymous Candidate"),
+    candidate_email: Optional[str] = Form(None),
     user_id: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
@@ -38,6 +39,7 @@ async def extract_raw_data(
     job = AnalysisJob(
         id=job_id,
         candidate_name=candidate_name,
+        candidate_email=candidate_email,
         user_id=user_id,
         status="pending",
         created_at=datetime.utcnow(),

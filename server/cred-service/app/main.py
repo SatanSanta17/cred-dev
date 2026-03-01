@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .database import init_db
-from .routes import extract, generate
+from .routes import extract, generate, stream
 
 app = FastAPI(
     title="CredDev Skill Intelligence Engine",
@@ -28,6 +28,7 @@ app.add_middleware(
 # Routes - Two-phase architecture
 app.include_router(extract.router, prefix="/api/v1", tags=["extraction"])
 app.include_router(generate.router, prefix="/api/v1", tags=["generation"])
+app.include_router(stream.router, prefix="/api/v1", tags=["streaming"])
 
 
 @app.on_event("startup")
