@@ -1,7 +1,6 @@
 """LinkedIn data fetching service."""
 
 import httpx
-from bs4 import BeautifulSoup
 from typing import Optional, Dict, Any
 import re
 
