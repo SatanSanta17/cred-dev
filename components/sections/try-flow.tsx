@@ -67,9 +67,13 @@ export function TryFlow() {
       // Phase 2: Poll extraction status every 3s (max ~2 minutes)
       const MAX_POLLS = 40
       pollCountRef.current = 0
+      let generationTriggered = false
 
       const pollExtraction = () => {
         pollRef.current = setInterval(async () => {
+          // Guard: don't trigger generation twice
+          if (generationTriggered) return
+
           pollCountRef.current += 1
 
           // Timeout: if still pending/extracting after MAX_POLLS, treat as failed
@@ -84,6 +88,7 @@ export function TryFlow() {
             const status = await getExtractionStatus(extractRes.job_id)
 
             if (status.status === 'extracted') {
+              generationTriggered = true
               cleanup()
 
               // Phase 3: Trigger generation

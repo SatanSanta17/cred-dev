@@ -83,7 +83,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                 animate={{ rotate: 360 }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
               >
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2 h-2 p-1 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
               </motion.div>
 
               {/* Center percentage */}
@@ -106,7 +106,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
           <div className="relative mb-6">
             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 rounded-full "
+                className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 rounded-full"
                 initial={{ width: '0%' }}
                 animate={{ width: `${percentage}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -115,7 +115,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
           </div>
 
           {/* Stage message */}
-          <div className="text-center mb-6 min-h-[3rem]">
+          <div className="text-center p-2 mb-6 min-h-[3rem]">
             <AnimatePresence mode="wait">
               <motion.p
                 key={message}
