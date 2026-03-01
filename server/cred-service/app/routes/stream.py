@@ -1,10 +1,9 @@
 import logging
 import asyncio
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from ..database import get_db, AnalysisJob, SessionLocal
+from ..database import AnalysisJob, SessionLocal
 from services.progress_manager import progress_manager
 
 logger = logging.getLogger(__name__)
@@ -13,15 +12,23 @@ router = APIRouter()
 
 
 @router.get("/generate/{job_id}/stream")
-async def stream_generation_progress(job_id: str, db: Session = Depends(get_db)):
+async def stream_generation_progress(job_id: str):
     """
     Server-Sent Events endpoint for real-time generation progress.
     Frontend connects: const es = new EventSource('/api/v1/generate/{job_id}/stream')
+
+    Uses short-lived DB sessions instead of Depends(get_db) to avoid
+    pinning a connection pool slot for the entire stream lifetime.
     """
 
-    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+    # Quick existence check with a short-lived session
+    db = SessionLocal()
+    try:
+        job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+    finally:
+        db.close()
 
     async def event_stream():
         timeout = 600  # 10 minutes max

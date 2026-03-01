@@ -32,7 +32,6 @@ class ExtractionService:
         github_url: str = None,
         leetcode_url: str = None,
         linkedin_url: str = None,
-        candidate_name: str = None,
     ):
         db: Session = SessionLocal()
         errors = []
@@ -101,9 +100,17 @@ class ExtractionService:
             # ---------------------------
             # DONE — mark as extracted even if some platforms had errors
             # ---------------------------
-            error_msg = "; ".join(errors) if errors else None
-            self._update_job_status(db, job_id, "extracted", error_msg)
+            # Pseudocode for desired logic:
+            total_sources_requested = sum([bool(resume_bytes), bool(github_url), bool(leetcode_url), bool(linkedin_url)])
+            successful_extractions = total_sources_requested - len(errors)
 
+            if successful_extractions == 0 and total_sources_requested > 0:
+                # All sources failed - fail the entire extraction
+                self._update_job_status(db, job_id, "failed", "All requested data sources failed to extract")
+            else:
+                # Some sources succeeded or none were requested
+                error_msg = "; ".join(errors) if errors else None
+                self._update_job_status(db, job_id, "extracted", error_msg)
         except Exception as e:
             logger.error(f"Extraction completely failed for {job_id}: {e}")
             self._update_job_status(db, job_id, "failed", str(e))

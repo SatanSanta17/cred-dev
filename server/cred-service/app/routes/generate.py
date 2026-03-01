@@ -124,11 +124,11 @@ async def generate_reports(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    allowed = ["extracted", "failed", "generating"]
+    allowed = ["extracted", "failed", "completed"]
     if job.status not in allowed:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot generate reports. Current status: {job.status}. Allowed: {allowed}"
+            detail=f"Cannot generate reports. Current status: {job.status}. Allowed: {', '.join(allowed)}"
         )
 
     # Reset state for retry
