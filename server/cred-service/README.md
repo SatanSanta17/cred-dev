@@ -46,7 +46,8 @@ Generated from the Intelligence Core:
 ```bash
 cd server/cred-service
 python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  
+# On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -72,16 +73,19 @@ uvicorn app.main:app --reload --port 8000
 # Health check
 curl http://localhost:8000/health
 
-# Start analysis (any combination of platforms)
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+# Phase 1: Extract raw data (any combination of platforms)
+curl -X POST "http://localhost:8000/api/v1/extract" \
   -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/yourusername" \
   -F "leetcode_url=https://leetcode.com/u/yourusername" \
   -F "linkedin_url=https://linkedin.com/in/yourprofile" \
   -F "candidate_name=Your Name"
 
-# Check results
-curl "http://localhost:8000/api/v1/analyze/{job_id}"
+# Phase 2: Generate intelligence reports
+curl -X POST "http://localhost:8000/api/v1/generate/{job_id}"
+
+# Check generation status and results
+curl "http://localhost:8000/api/v1/generate/{job_id}"
 ```
 
 ---
@@ -96,66 +100,76 @@ server/cred-service/
 │   ├── config.py            # Environment & settings
 │   ├── database.py          # SQLAlchemy models
 │   └── routes/
-│       └── analyze.py       # API endpoints
+│       ├── extract.py       # Raw data extraction endpoints
+│       └── generate.py      # Intelligence generation endpoints
 ├── services/
-│   ├── __init__.py          # Main AnalysisService orchestrator
+│   ├── extraction.py        # Raw data collection service
+│   ├── pipeline_runner.py   # Analysis orchestration
+│   ├── credibility_engine.py # Claim validation engine
+│   ├── intelligence_engine.py # 4-domain analysis engine
 │   ├── resume_parser.py     # PDF/text resume processing
 │   ├── github_fetcher.py    # GitHub API integration
 │   ├── leetcode_fetcher.py  # LeetCode GraphQL API
 │   ├── linkedin_fetcher.py  # LinkedIn profile scraping
-│   ├── verifier.py          # 4-domain analysis engine
-│   └── report_generator.py  # Intelligence Core & views
-├── models/
-│   ├── analysis.py          # API request/response models
-│   └── reports.py           # Intelligence data structures
-└── utils/
-    └── helpers.py           # Utility functions
+│   ├── verifier.py          # Legacy 4-domain analysis
+│   ├── report_generator.py  # Report generation service
+│   ├── report_storage.py    # Report persistence
+│   ├── raw_data_loader.py   # Raw data retrieval
+│   └── resume_claims_extractor.py # Claim extraction
+└── requirements.txt         # Python dependencies
 ```
 
-### Intelligence Pipeline
+### Two-Phase Intelligence Pipeline
 
-#### Stage 1: Raw Signal Extraction
-- **Resume**: Skills, experience claims, project descriptions, contact info
-- **GitHub**: Repositories, languages, commit patterns, production indicators
-- **LeetCode**: Problem counts, difficulty ratios, activity patterns (GraphQL API)
-- **LinkedIn**: Professional experience, company history, credibility signals
+#### Phase 1: Raw Signal Extraction (`/extract`)
+**Purpose**: Collect and normalize data from all platforms without analysis.
 
-#### Stage 2: 4-Domain Analysis
+- **Resume Processing**: PDF/text parsing, claim extraction, structured data
+- **GitHub Analysis**: Repository metadata, language stats, activity patterns
+- **LeetCode Integration**: GraphQL API data, submission calendar, tag analysis
+- **LinkedIn Scraping**: Professional experience, company history, skills validation
+- **Data Storage**: Raw signals persisted for analysis
 
-##### 🎯 **Domain 1: Engineering & Development**
-- Production capability assessment
-- Architecture pattern recognition
-- Code complexity evaluation
-- System design indicators
+#### Phase 2: Intelligence Generation (`/generate`)
+**Purpose**: Transform raw data into actionable developer intelligence.
 
-##### 🧮 **Domain 2: Problem Solving & Algorithms**
-- Algorithmic thinking evaluation
-- Interview readiness assessment
-- Competitive programming analysis
-- Pattern recognition skills
+##### Stage 2.1: Claim Validation
+- **Credibility Engine**: Cross-platform claim verification (VERIFIED/PLAUSIBLE/CLAIMED)
+- **Timeline Consistency**: Employment and project history validation
+- **Skills Correlation**: Technical ability assessment across platforms
 
-##### ✅ **Domain 3: Professional Credibility**
-- Claim verification (VERIFIED/PLAUSIBLE/CLAIMED)
-- Timeline consistency checks
-- Skills validation across platforms
-- Trustworthiness assessment
+##### Stage 2.2: 4-Domain Analysis
 
-##### ⚡ **Domain 4: Execution & Consistency**
-- Long-term engagement patterns
-- Learning velocity analysis
-- Quality-over-quantity assessment
-- Discipline indicators
+###### 🎯 **Domain 1: Engineering & Development**
+- Production capability assessment from GitHub repositories
+- Architecture pattern recognition and system design indicators
+- Code quality evaluation and technical depth analysis
 
-#### Stage 3: Intelligence Core Generation
-- **Capability Identity** synthesis
-- **Cross-domain pattern** recognition
+###### 🧮 **Domain 2: Problem Solving & Algorithms**
+- Algorithmic thinking evaluation from LeetCode patterns
+- Interview readiness assessment and competitive programming analysis
+- Problem-solving consistency and difficulty progression
+
+###### ✅ **Domain 3: Professional Credibility**
+- Claim verification across resume, LinkedIn, and GitHub
+- Timeline consistency checks and career progression validation
+- Trustworthiness assessment and professional network analysis
+
+###### ⚡ **Domain 4: Execution & Consistency**
+- Long-term engagement patterns across all platforms
+- Learning velocity and skill development trajectory
+- Discipline indicators and sustained performance analysis
+
+##### Stage 2.3: Intelligence Core Generation
+- **Capability Identity** synthesis (one-sentence professional positioning)
+- **Cross-domain pattern** recognition and correlation analysis
 - **Overall scoring** (35% Engineering + 25% Problem Solving + 20% Credibility + 20% Execution)
-- **Signal classification** (Green/Yellow/Red flags)
+- **Signal classification** (Green/Yellow/Red flags with evidence)
 
-#### Stage 4: Derived Views
-- **Developer Insights**: Growth trajectories, skill development focus
+##### Stage 2.4: Derived Views Creation
+- **Developer Insights**: Growth trajectories and skill development guidance
 - **Recruiter Insights**: Hiring confidence, interview guidance, risk assessment
-- **Credibility Card**: Shareable professional positioning
+- **Credibility Card**: Shareable professional positioning summary
 
 ---
 
@@ -171,12 +185,12 @@ Health check endpoint.
 }
 ```
 
-#### `POST /api/v1/analyze`
-Start a new analysis job using any combination of platforms.
+#### `POST /api/v1/extract`
+Extract raw data from resume, GitHub, LeetCode, and LinkedIn platforms.
 
 **Request (All Platforms):**
 ```bash
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+curl -X POST "http://localhost:8000/api/v1/extract" \
   -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/username" \
   -F "leetcode_url=https://leetcode.com/u/username" \
@@ -186,7 +200,7 @@ curl -X POST "http://localhost:8000/api/v1/analyze" \
 
 **Request (Minimum - Any One Platform):**
 ```bash
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+curl -X POST "http://localhost:8000/api/v1/extract" \
   -F "github_url=https://github.com/username"
 ```
 
@@ -194,13 +208,25 @@ curl -X POST "http://localhost:8000/api/v1/analyze" \
 ```json
 {
   "job_id": "uuid-here",
-  "status": "processing",
-  "message": "Skill Intelligence Engine analysis started"
+  "status": "extracting",
+  "message": "Raw data extraction started"
 }
 ```
 
-#### `GET /api/v1/analyze/{job_id}`
-Get analysis results.
+#### `POST /api/v1/generate/{job_id}`
+Generate intelligence reports from previously extracted raw data.
+
+**Response:**
+```json
+{
+  "job_id": "uuid-here",
+  "status": "generating",
+  "message": "Intelligence generation started"
+}
+```
+
+#### `GET /api/v1/generate/{job_id}`
+Get generation status and completed intelligence reports.
 
 **Response (Completed):**
 ```json
@@ -384,31 +410,43 @@ CREATE TABLE reports (
 
 ### Basic API Test
 ```bash
-# Start analysis
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+# Phase 1: Extract raw data
+curl -X POST "http://localhost:8000/api/v1/extract" \
   -F "github_url=https://github.com/microsoft" \
   -F "candidate_name=Test User"
 
-# Response includes job_id, check status:
-curl "http://localhost:8000/api/v1/analyze/{job_id}"
+# Phase 2: Generate intelligence
+curl -X POST "http://localhost:8000/api/v1/generate/{job_id}"
+
+# Check generation status:
+curl "http://localhost:8000/api/v1/generate/{job_id}"
 ```
 
 ### Complete System Test
 ```bash
-# Full analysis with all platforms
-curl -X POST "http://localhost:8000/api/v1/analyze" \
+# Phase 1: Extract raw data from all platforms
+curl -X POST "http://localhost:8000/api/v1/extract" \
   -F "resume=@/path/to/resume.pdf" \
   -F "github_url=https://github.com/yourusername" \
   -F "leetcode_url=https://leetcode.com/u/yourusername" \
   -F "linkedin_url=https://linkedin.com/in/yourprofile" \
   -F "candidate_name=Your Name"
 
-# Poll for completion (30-60 seconds)
-watch -n 5 "curl -s http://localhost:8000/api/v1/analyze/{job_id} | jq .status"
+# Phase 2: Generate intelligence reports
+curl -X POST "http://localhost:8000/api/v1/generate/{job_id}"
+
+# Poll for completion (45-90 seconds total)
+watch -n 10 "curl -s http://localhost:8000/api/v1/generate/{job_id} | jq .status"
 
 # View complete intelligence report
-curl "http://localhost:8000/api/v1/analyze/{job_id}" | jq
+curl "http://localhost:8000/api/v1/generate/{job_id}" | jq
 ```
+
+### Two-Phase Benefits
+- **Phase 1** extracts raw data once (faster, ~15-30 seconds)
+- **Phase 2** generates intelligence (slower, ~30-60 seconds)
+- **Separation** allows retrying analysis without re-extraction
+- **Debugging** isolates issues in data collection vs intelligence generation
 
 ---
 

@@ -2,10 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles, Github, Code2, Award, ExternalLink } from 'lucide-react'
+import { ArrowRight, Sparkles, Github, Code2, Award, ExternalLink, Zap } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
 import { FloatingCard } from '@/components/shared/floating-card'
-import { WaitlistCount } from '@/components/shared/waitlist-count'
 import Link from 'next/link'
 
 export function Hero() {
@@ -15,7 +14,6 @@ export function Hero() {
       icon: Code2,
       iconColor: 'text-green-400',
       label: 'Problem Solving',
-      // rank: 'Top 12%',
       gradientFrom: 'from-green-400',
       gradientTo: 'to-emerald-600',
       source: 'LeetCode Analysis',
@@ -26,7 +24,6 @@ export function Hero() {
       icon: Github,
       iconColor: 'text-blue-400',
       label: 'Engineering',
-      // rank: 'Top 20%',
       gradientFrom: 'from-blue-400',
       gradientTo: 'to-cyan-600',
       source: 'GitHub Contributions',
@@ -37,22 +34,18 @@ export function Hero() {
       icon: Award,
       iconColor: 'text-purple-400',
       label: 'Consistency',
-      // rank: 'Top 8%',
       gradientFrom: 'from-purple-400',
       gradientTo: 'to-pink-600',
       source: 'Activity Score',
       delay: 1.1
     }
   ]
-  const scrollToWaitlist = () => {
-    document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })
-  }
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-black via-slate-900 to-black">
       {/* Animated Background Grid */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
-      
+
       {/* Gradient Orbs */}
       <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
       <div className="absolute top-0 -right-4 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000" />
@@ -65,7 +58,7 @@ export function Hero() {
           transition={{ duration: 0.8 }}
           className="text-center max-w-5xl mx-auto"
         >
-          {/* Beta Badge */}
+          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -73,26 +66,11 @@ export function Hero() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 backdrop-blur-sm mb-8"
           >
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm text-purple-300">Coming Soon - Join the Waitlist</span>
-          </motion.div>
-
-          {/* Waitlist Count - Only show when 100+ signups */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.25 }}
-            className="text-center mb-6"
-          >
-            <WaitlistCount 
-              className="text-purple-300 text-sm" 
-              showLabel={true}
-              userType="all"
-              hideUntil={100}
-            />
+            <span className="text-sm text-purple-300">AI-Powered Developer Verification</span>
           </motion.div>
 
           {/* Main Headline */}
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
@@ -100,8 +78,8 @@ export function Hero() {
           >
             <GradientText>CredDev</GradientText>
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
@@ -110,7 +88,7 @@ export function Hero() {
             The credibility layer for developers
           </motion.p>
 
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
@@ -120,24 +98,26 @@ export function Hero() {
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             className="flex flex-col items-center gap-4 mb-20"
           >
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                onClick={scrollToWaitlist}
-                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
-              >
-                Join Waitlist
-                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Link href="/try">
+                <Button
+                  size="lg"
+                  className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
+                >
+                  <Zap className="mr-2 w-5 h-5" />
+                  Try Now — Free
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
               <Link href="/report/Burhanuddin" target="_blank">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   variant="outline"
                   className="text-lg px-8 py-6 h-auto border-gray-700 hover:bg-gray-800 gap-2"
                 >
@@ -146,9 +126,13 @@ export function Hero() {
                 </Button>
               </Link>
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              First 500 developers get early access • See a real example report
-            </p>
+            <div className="flex flex-col sm:flex-row gap-3 mt-2">
+              <Link href="/waitlist">
+                <span className="text-sm text-gray-500 hover:text-purple-400 transition-colors cursor-pointer underline underline-offset-4">
+                  Or join the waitlist for early access
+                </span>
+              </Link>
+            </div>
           </motion.div>
 
           {/* Floating Cards Preview */}
@@ -167,9 +151,6 @@ export function Hero() {
                       <Icon className={`w-5 h-5 ${metric.iconColor}`} />
                       <div className="text-sm text-gray-400">{metric.label}</div>
                     </div>
-                    {/* <div className={`text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${metric.gradientFrom} ${metric.gradientTo}`}>
-                      {metric.rank}
-                    </div> */}
                     <div className="text-xs text-gray-500 mt-2">{metric.source}</div>
                   </div>
                 </FloatingCard>
