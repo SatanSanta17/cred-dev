@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, B
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
+import logging
 from datetime import datetime
-from ..database import get_db, AnalysisJob
+from ..database import get_db, AnalysisJob, SessionLocal
 from services.extraction import ExtractionService
 from services.raw_data_loader import RawDataLoader
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -68,17 +71,33 @@ async def extract_raw_data(
 
     extraction_service = ExtractionService()
 
-    # Trigger background extraction with bytes (not UploadFile)
-    background_tasks.add_task(
-        extraction_service.run_extraction,
-        job_id=job_id,
-        resume_bytes=resume_bytes,
-        resume_filename=resume_filename,
-        github_url=github_url,
-        leetcode_url=leetcode_url,
-        linkedin_url=linkedin_url,
-        candidate_name=candidate_name
-    )
+    # Wrapper to catch any crash and mark job as failed
+    async def safe_extraction():
+        try:
+            await extraction_service.run_extraction(
+                job_id=job_id,
+                resume_bytes=resume_bytes,
+                resume_filename=resume_filename,
+                github_url=github_url,
+                leetcode_url=leetcode_url,
+                linkedin_url=linkedin_url,
+                candidate_name=candidate_name,
+            )
+        except Exception as e:
+            logger.error(f"Background extraction crashed for {job_id}: {e}")
+            try:
+                db_session = SessionLocal()
+                job = db_session.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+                if job and job.status not in ("extracted", "failed"):
+                    job.status = "failed"
+                    job.error_message = f"Extraction crashed: {str(e)}"
+                    job.updated_at = datetime.utcnow()
+                    db_session.commit()
+                db_session.close()
+            except Exception:
+                pass
+
+    background_tasks.add_task(safe_extraction)
 
     return {
         "job_id": job_id,

@@ -21,6 +21,7 @@ export function TryFlow() {
   const [errorMessage, setErrorMessage] = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const pollCountRef = useRef(0)
 
   const { progress, error: sseError, reset: resetSSE } = useGenerationProgress(
     jobId,
@@ -63,9 +64,22 @@ export function TryFlow() {
       setState('extracting')
       setFormLoading(false)
 
-      // Phase 2: Poll extraction status every 3s
+      // Phase 2: Poll extraction status every 3s (max ~2 minutes)
+      const MAX_POLLS = 40
+      pollCountRef.current = 0
+
       const pollExtraction = () => {
         pollRef.current = setInterval(async () => {
+          pollCountRef.current += 1
+
+          // Timeout: if still pending/extracting after MAX_POLLS, treat as failed
+          if (pollCountRef.current > MAX_POLLS) {
+            cleanup()
+            setErrorMessage('Extraction timed out. Please try again.')
+            setState('error')
+            return
+          }
+
           try {
             const status = await getExtractionStatus(extractRes.job_id)
 
