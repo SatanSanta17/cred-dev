@@ -32,6 +32,7 @@ class ExtractionService:
         github_url: str = None,
         leetcode_url: str = None,
         linkedin_url: str = None,
+        candidate_name: str = None,
     ):
         db: Session = SessionLocal()
         errors = []
