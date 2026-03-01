@@ -1,6 +1,7 @@
 """
 Email service for sending generated reports as PDF attachments.
-Uses Resend (production) or SMTP (local dev) + reportlab for PDF generation.
+Supports Brevo (production), Resend (deprecated, kept for future), or SMTP (local dev).
+Uses reportlab for PDF generation.
 """
 
 import io
@@ -480,6 +481,87 @@ class ResendEmailService:
 
 
 # ---------------------------------------------------------------------------
+# Brevo Email Service (production — recommended)
+# ---------------------------------------------------------------------------
+
+class BrevoEmailService:
+    """Brevo (formerly Sendinblue) API-based email service.
+    Uses the REST API via httpx — no extra SDK dependency needed.
+    Free tier: 300 emails/day, no custom domain required.
+    """
+
+    API_URL = "https://api.brevo.com/v3/smtp/email"
+
+    def __init__(self):
+        self.api_key = settings.brevo_api_key
+        self.from_email = settings.brevo_from_email
+        self.from_name = settings.brevo_from_name
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.api_key)
+
+    def send_reports(self, to_email: str, candidate_name: str, reports: Dict[str, str]):
+        import httpx
+
+        if not to_email:
+            logger.info(f"No email provided for {candidate_name} — skipping")
+            return
+
+        if not self.is_configured:
+            logger.warning(
+                f"[EMAIL] Brevo not configured — would have sent reports to {to_email}. "
+                f"Set BREVO_API_KEY in env to enable."
+            )
+            return
+
+        # Generate PDFs
+        attachments, report_names = _generate_pdf_attachments(candidate_name, reports)
+        if not attachments:
+            return
+
+        # Build email
+        subject = f"Your CredDev Credibility Reports — {candidate_name}"
+        html_body = _build_email_html(candidate_name, report_names)
+
+        # Brevo attachment format: list of dicts with "name" + "content" (base64)
+        brevo_attachments = [
+            {
+                "name": filename,
+                "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+            }
+            for filename, pdf_bytes in attachments
+        ]
+
+        payload = {
+            "sender": {"name": self.from_name, "email": self.from_email},
+            "to": [{"email": to_email, "name": candidate_name}],
+            "subject": subject,
+            "htmlContent": html_body,
+            "attachment": brevo_attachments,
+        }
+
+        headers = {
+            "api-key": self.api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        try:
+            response = httpx.post(self.API_URL, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            logger.info(
+                f"[EMAIL] Brevo sent {len(attachments)} PDF reports to {to_email} "
+                f"for {candidate_name} (messageId={result.get('messageId', 'unknown')})"
+            )
+
+        except Exception as e:
+            logger.error(f"[EMAIL] Brevo failed to send to {to_email}: {e}")
+            raise
+
+
+# ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
@@ -513,15 +595,18 @@ def _generate_pdf_attachments(candidate_name: str, reports: Dict[str, str]):
 
 
 # ---------------------------------------------------------------------------
-# Factory — auto-selects Resend (prod) or SMTP (dev)
+# Factory — auto-selects: Brevo (prod) > Resend (deprecated) > SMTP (dev)
 # ---------------------------------------------------------------------------
 
 def get_email_service():
     """Return the appropriate email service based on config.
-    Resend takes priority (production). Falls back to SMTP (local dev).
+    Priority: Brevo (production) > Resend (deprecated, kept for future) > SMTP (local dev).
     """
-    if settings.resend_api_key:
-        logger.info("[EMAIL] Using Resend email service")
+    if settings.brevo_api_key:
+        logger.info("[EMAIL] Using Brevo email service")
+        return BrevoEmailService()
+    elif settings.resend_api_key:
+        logger.info("[EMAIL] Using Resend email service (deprecated)")
         return ResendEmailService()
     else:
         logger.info("[EMAIL] Using SMTP email service (local dev)")

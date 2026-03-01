@@ -25,7 +25,12 @@ class Settings(BaseSettings):
     smtp_from_email: Optional[str] = None  # defaults to smtp_user if not set
     smtp_from_name: str = "CredDev"
 
-    # Resend (production email)
+    # Brevo (production email — recommended)
+    brevo_api_key: Optional[str] = None
+    brevo_from_email: str = "creddev.reports@gmail.com"
+    brevo_from_name: str = "CredDev"
+
+    # Resend (deprecated — kept for future use with custom domain)
     resend_api_key: Optional[str] = None
     resend_from_email: str = "CredDev <onboarding@resend.dev>"
 
