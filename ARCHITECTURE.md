@@ -174,7 +174,7 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 | Service | File | What It Does |
 |---------|------|--------------|
 | `ExtractionService` | `services/extraction.py` | Orchestrates data fetching from all platforms. Each platform is independent — one failure doesn't block others. Marks job "extracted" when at least one source succeeds, "failed" only if ALL sources fail. |
-| `GitHubFetcher` | `services/github_fetcher.py` | Two-query architecture: Query 1 fetches profile, 100 repos (lightweight), pinned repos, organizations, and language bytes. Query 2 fetches production readiness signals (README, Dockerfile, CI, tests, .env.example, dependency files) for the top 15 repos (by stars). Returns raw merged response. Requires `GITHUB_TOKEN`. |
+| `GitHubFetcher` | `services/github_fetcher.py` | Two-query architecture: Query 1 fetches profile, 100 repos (lightweight), pinned repos, organizations, and language bytes. Query 2 fetches production readiness signals (README, Dockerfile, CI, tests, .env.example, dependency files) for the top 15 repos (by stars), batched in groups of 5 to stay within GitHub's query complexity limit. Returns raw merged response. Requires `GITHUB_TOKEN`. |
 | `LeetCodeFetcher` | `services/leetcode_fetcher.py` | Single GraphQL query to LeetCode's public API. Returns raw response — submission stats, tag problem counts, contest ranking, recent submissions (100), badges. Uses browser-like headers. |
 | `LinkedInFetcher` | `services/linkedin_fetcher.py` | Stub — records URL and extracted username only. LinkedIn blocks scraping (HTTP 999). Future: OAuth integration. |
 | `ResumeParser` | `services/resume_parser.py` | Extracts raw text from PDF using PyPDF2. No structured parsing — LLM does all reasoning from raw text. |
@@ -281,7 +281,7 @@ async def safe_extraction():
 
 | Service | Purpose | Auth | Free Tier |
 |---------|---------|------|-----------|
-| **GitHub GraphQL API** | Repos, PRs, contributions, profile, production signals | `GITHUB_TOKEN` (PAT) | 5,000 requests/hour (2 calls per extraction) |
+| **GitHub GraphQL API** | Repos, PRs, contributions, profile, production signals | `GITHUB_TOKEN` (PAT) | 5,000 requests/hour (up to 4 calls per extraction) |
 | **LeetCode GraphQL API** | Submissions, stats, contests, badges | No auth (browser headers) | Public endpoint |
 | **OpenAI API** | GPT-5-mini with web_search_preview for report generation | `OPENAI_API_KEY` | Pay per token |
 | **Brevo Transactional API** | Send PDF reports via email | `BREVO_API_KEY` | 300 emails/day |

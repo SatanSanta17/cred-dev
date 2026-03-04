@@ -197,10 +197,13 @@ class GitHubFetcher:
 
         Fetches file existence checks (README, Dockerfile, CI, tests, .env.example)
         and dependency file content (package.json, requirements.txt) for each repo.
+        Batches repos into groups of BATCH_SIZE to stay within GitHub's query complexity limit.
         Returns dict keyed by repo name with production signal data.
         """
         if not top_repos:
             return {}
+
+        BATCH_SIZE = 5  # 5 repos × 9 file checks = 45 lookups per query (safe for GitHub)
 
         PRODUCTION_SIGNALS_FRAGMENT = """
         fragment ProductionSignals on Repository {
@@ -217,48 +220,50 @@ class GitHubFetcher:
         }
         """
 
-        # Build aliased query for all top repos in a single API call
-        repo_queries = []
-        for i, (owner, name) in enumerate(top_repos):
-            repo_queries.append(
-                f'repo{i}: repository(owner: "{owner}", name: "{name}") {{ ...ProductionSignals }}'
-            )
+        signals_by_repo = {}
 
-        query = "query {\n" + "\n".join(repo_queries) + "\n}\n" + PRODUCTION_SIGNALS_FRAGMENT
+        # Split into batches to avoid GitHub's query complexity limit (502 errors)
+        batches = [top_repos[i:i + BATCH_SIZE] for i in range(0, len(top_repos), BATCH_SIZE)]
 
-        try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.post(
-                    self.graphql_url,
-                    json={"query": query},
-                    headers=self._headers(),
-                )
-                resp.raise_for_status()
-                result = resp.json()
+        for batch_idx, batch in enumerate(batches):
+            try:
+                repo_queries = []
+                for i, (owner, name) in enumerate(batch):
+                    repo_queries.append(
+                        f'repo{i}: repository(owner: "{owner}", name: "{name}") {{ ...ProductionSignals }}'
+                    )
 
-                if "errors" in result:
-                    logger.warning(f"Query 2 GraphQL errors: {result['errors']}")
-                    # Partial data may still be present — continue with what we have
-                    if "data" not in result:
-                        return {}
+                query = "query {\n" + "\n".join(repo_queries) + "\n}\n" + PRODUCTION_SIGNALS_FRAGMENT
 
-                data = result.get("data", {})
+                async with httpx.AsyncClient(timeout=30) as client:
+                    resp = await client.post(
+                        self.graphql_url,
+                        json={"query": query},
+                        headers=self._headers(),
+                    )
+                    resp.raise_for_status()
+                    result = resp.json()
 
-                # Build dict keyed by repo name, strip nulls and cap large dependency files
-                signals_by_repo = {}
-                for i in range(len(top_repos)):
-                    repo_data = data.get(f"repo{i}")
-                    if not repo_data:
-                        continue
-                    repo_name = repo_data.get("name", top_repos[i][1])
-                    cleaned = self._clean_production_signals(repo_data)
-                    signals_by_repo[repo_name] = cleaned
+                    if "errors" in result:
+                        logger.warning(f"Query 2 batch {batch_idx} GraphQL errors: {result['errors']}")
+                        if "data" not in result:
+                            continue
 
-                return signals_by_repo
+                    data = result.get("data", {})
 
-        except Exception as e:
-            logger.warning(f"Query 2 (production signals) failed, continuing without: {e}")
-            return {}
+                    for i in range(len(batch)):
+                        repo_data = data.get(f"repo{i}")
+                        if not repo_data:
+                            continue
+                        repo_name = repo_data.get("name", batch[i][1])
+                        cleaned = self._clean_production_signals(repo_data)
+                        signals_by_repo[repo_name] = cleaned
+
+            except Exception as e:
+                logger.warning(f"Query 2 batch {batch_idx} failed, continuing with remaining batches: {e}")
+                continue
+
+        return signals_by_repo
 
     def _clean_production_signals(self, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Clean production signal data: strip null entries, collapse test dirs, cap large files."""

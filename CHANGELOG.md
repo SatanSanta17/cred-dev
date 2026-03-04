@@ -6,12 +6,12 @@
 - Two-query architecture in `github_fetcher.py`: Query 1 (profile + 100 repos + pinned repos + organizations + language bytes) and Query 2 (production readiness signals for top 15 repos)
 - `_fetch_profile_and_repos()` — enriched Query 1 with `pinnedItems(first: 6)`, `organizations(first: 10)`, and `languages edges { size }` for byte-level proficiency
 - `_select_top_repos()` — filters out forks/archived/private, sorts by stars then pushedAt, returns top 15
-- `_fetch_production_signals()` — GraphQL aliased query checking README, Dockerfile, CI workflows, test directories, .env.example, and dependency file content for up to 15 repos in a single API call
+- `_fetch_production_signals()` — GraphQL aliased query checking README, Dockerfile, CI workflows, test directories, .env.example, and dependency file content for up to 15 repos, batched in groups of 5 to avoid GitHub's query complexity limit (502 errors)
 - `_clean_production_signals()` — strips null entries, collapses three test directory checks into one `testDirectory` key, caps dependency file text at 50KB
 - `_merge_production_signals()` — attaches production signal data to matching repos in the response
 
 ### Changed
-- GitHub API calls per extraction: 2 (was 1) — still well within 5,000/hour rate limit
+- GitHub API calls per extraction: up to 4 (was 1) — Query 1 + up to 3 batches for Query 2. Still well within 5,000/hour rate limit
 - Language data now includes byte counts per language per repo (was names only)
 
 ### Removed

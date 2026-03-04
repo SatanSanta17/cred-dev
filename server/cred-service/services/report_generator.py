@@ -174,7 +174,8 @@ Every sentence must be cited.
 - Production signals: Docker, CI/CD, tests — per repo where found
 
 ### 3. Problem Solving Depth
-- Total solved, acceptance rate, difficulty breakdown (cite exact fields)
+- Total solved, difficulty breakdown (cite exact fields)
+- Acceptance rate: calculate as (acSubmissionNum[All].count / totalSubmissionNum[All].count) × 100. Do NOT confuse "problems solved" (unique accepted) with "total accepted submissions" (includes retries). Cite both numerator and denominator.
 - Top topic strengths from tagProblemCounts (cite top 5 with problem counts)
 - Contest history: attended count, rating if available
 - Languages used in LeetCode submissions (cite recentSubmissionList lang fields)
@@ -240,7 +241,7 @@ Do not bullet everything — write it as a mentor would speak it.
 
 ### 3. Critical Gaps
 Be specific with numbers but write naturally:
-- Problem solving gaps (hard problem count, topic holes)
+- Problem solving gaps (hard problem count, topic holes, acceptance rate). Acceptance rate formula: (acSubmissionNum[All].count / totalSubmissionNum[All].count) × 100.
 - Production readiness (CI, Docker, tests — which repos, how many)
 - Consistency (combine GitHub and LeetCode signals together — do not penalise for low LeetCode if GitHub is active)
 - Code collaboration (reviews given, external PRs)
@@ -287,6 +288,7 @@ OUTPUT SECTIONS:
 Only platform-verified information here — do NOT list skills that are resume-only claims.
 - Role level (derived from experience timeline and platform evidence)
 - Verified languages and frameworks (found in GitHub repos, topics, or LeetCode submissions)
+- LeetCode acceptance rate: calculate as (acSubmissionNum[All].count / totalSubmissionNum[All].count) × 100
 Write this as a clean, scannable summary a recruiter can read in 30 seconds.
 
 ### 2. Hire Recommendation

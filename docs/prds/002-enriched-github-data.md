@@ -145,14 +145,18 @@ query($owner: String!, $name: String!) {
 }
 ```
 
-**Note:** GitHub GraphQL doesn't support querying multiple repositories by variable array in a single call. To avoid 15 separate API calls, we use **query aliasing** — a single query with 15 aliased `repository()` calls:
+**Note:** GitHub GraphQL doesn't support querying multiple repositories by variable array in a single call. We use **query aliasing** with **batching** — repos are split into batches of 5 (5 repos × 9 file checks = 45 lookups per batch, safe for GitHub's complexity limit). 15 repos = 3 batched API calls.
+
+**Why batching?** Putting all 15 repos in a single aliased query (135 `object()` lookups) exceeds GitHub's query complexity limit and returns 502 Bad Gateway. Batches of 5 stay well within the limit.
 
 ```graphql
+# Each batch contains up to 5 repos
 query {
     repo0: repository(owner: "user", name: "repo-a") { ...ProductionSignals }
     repo1: repository(owner: "user", name: "repo-b") { ...ProductionSignals }
-    ...
-    repo14: repository(owner: "user", name: "repo-o") { ...ProductionSignals }
+    repo2: repository(owner: "user", name: "repo-c") { ...ProductionSignals }
+    repo3: repository(owner: "user", name: "repo-d") { ...ProductionSignals }
+    repo4: repository(owner: "user", name: "repo-e") { ...ProductionSignals }
 }
 
 fragment ProductionSignals on Repository {
@@ -164,12 +168,12 @@ fragment ProductionSignals on Repository {
     testDir: object(expression: "HEAD:test") { ... on Tree { entries { name } } }
     underscoreTests: object(expression: "HEAD:__tests__") { ... on Tree { entries { name } } }
     envExample: object(expression: "HEAD:.env.example") { ... on Blob { byteSize } }
-    packageJson: object(expression: "HEAD:package.json") { ... on Blob { text } }
-    requirementsTxt: object(expression: "HEAD:requirements.txt") { ... on Blob { text } }
+    packageJson: object(expression: "HEAD:package.json") { ... on Blob { byteSize text } }
+    requirementsTxt: object(expression: "HEAD:requirements.txt") { ... on Blob { byteSize text } }
 }
 ```
 
-This sends **one API call** for all 15 repos.
+This sends **3 batched API calls** for 15 repos (5 per batch). If one batch fails, the others still succeed.
 
 ### Data Flow
 
@@ -198,9 +202,9 @@ From Query 1 results, select top 15 repos by:
 ### Edge Cases
 
 - **User has fewer than 15 qualifying repos:** Query only the repos available. If 0 qualifying repos, skip Query 2 entirely.
-- **Query 2 fails:** Log warning, return Query 1 data without production signals. Reports will be less detailed but still generate. Extraction should NOT fail because of Query 2.
+- **Query 2 batch fails:** Log warning for that batch, continue with remaining batches. Partial production signals are better than none. Extraction should NOT fail because of Query 2.
 - **Dependency file is very large:** `package.json` or `requirements.txt` could theoretically be huge. Cap at checking `byteSize` first — if over 50KB, skip fetching `text` content. In practice these files are rarely over 5KB.
-- **Rate limiting:** Two GitHub API calls per extraction (was one). Still well within 5000/hour limit.
+- **Rate limiting:** Up to 4 GitHub API calls per extraction (1 for Query 1 + up to 3 batches for Query 2). Still well within 5000/hour limit.
 
 ---
 
@@ -250,7 +254,7 @@ From Query 1 results, select top 15 repos by:
 
 ## 7. Risks
 
-- **Query 2 response size:** 15 repos × ~10 file checks could return a large response. Mitigated by only fetching file existence (byteSize) for most, and text content only for dependency files.
+- **Query 2 complexity limit:** 15 repos × 9 file checks = 135 `object()` lookups in a single query exceeds GitHub's complexity limit (returns 502). **Fixed:** Repos are batched into groups of 5 (45 lookups per batch, 3 batches for 15 repos). Each batch fails independently.
 - **LLM context size increase:** More data means more tokens in the prompt. The current context already includes raw GitHub JSON, LeetCode JSON, and resume text. Adding production signals and dependency file content for 15 repos could add 5-15KB. This is within GPT-5-mini's context window but worth monitoring.
 - **GitHub API changes:** If `object(expression: ...)` syntax changes, Query 2 breaks. **Handled:** Query 2 failure is non-fatal — extraction continues with Query 1 data only.
 - **Dependency file content parsing:** The LLM receives raw `package.json` or `requirements.txt` text and must reason about it. No pre-processing. This is consistent with our existing approach (raw data → LLM reasoning).
