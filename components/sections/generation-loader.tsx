@@ -11,7 +11,7 @@ interface GenerationLoaderProps {
 
 export function GenerationLoader({ progress, candidateName }: GenerationLoaderProps) {
   const [showPulse, setShowPulse] = useState(true)
-  const percentage = progress?.percentage ?? 5
+  const percentage = progress?.percentage ?? 0
   const message = progress?.message ?? 'Initializing analysis pipeline...'
 
   // Subtle pulse animation toggle
@@ -83,7 +83,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                 animate={{ rotate: 360 }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
               >
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
               </motion.div>
 
               {/* Center percentage */}
