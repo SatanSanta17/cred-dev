@@ -58,7 +58,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
 
           {/* Orbital animation */}
           <div className="relative flex items-center justify-center mb-10">
-            <div className="relative w-36 h-36">
+            <div className="relative w-44 h-44">
               {/* Outer ring */}
               <motion.div
                 className="absolute inset-0 rounded-full border-2 border-purple-500/20"

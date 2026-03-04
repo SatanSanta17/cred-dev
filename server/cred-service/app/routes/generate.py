@@ -14,11 +14,88 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# =========================================
+# Section-aware messages for each report type.
+# Rotated based on token progress during streaming.
+# =========================================
+
+EXTENSIVE_MESSAGES = [
+    "Evaluating capability identity and role signals...",
+    "Analyzing engineering depth across repositories...",
+    "Reviewing problem solving patterns and difficulty spread...",
+    "Assessing execution consistency across platforms...",
+    "Checking production readiness signals in repos...",
+    "Cross-referencing resume claims with platform evidence...",
+    "Analyzing company background and domain context...",
+    "Scanning for risk flags and discrepancies...",
+    "Synthesizing final technical positioning...",
+]
+
+DEVELOPER_MESSAGES = [
+    "Assessing current standing from platform data...",
+    "Identifying verified strengths across your profile...",
+    "Pinpointing critical gaps for growth...",
+    "Crafting your 30-day action plan...",
+    "Mapping 90-day career direction...",
+]
+
+RECRUITER_MESSAGES = [
+    "Building candidate snapshot from verified data...",
+    "Formulating hire recommendation and confidence...",
+    "Summarizing verified technical strengths...",
+    "Checking for red flags and discrepancies...",
+    "Analyzing company background and domain fit...",
+    "Determining role and team fit...",
+]
+
+WEB_SEARCH_MESSAGES = [
+    "Searching the web for verification...",
+    "Searching the web for company context...",
+    "Searching the web for additional data...",
+]
+
+
+def _make_progress_callback(job_id: str, stage: str, pct_start: int, pct_end: int, messages: list):
+    """
+    Creates a progress callback for a single report's streaming LLM call.
+    Rotates through section-aware messages and increments percentage within the given range.
+    """
+    state = {"msg_index": 0, "web_search_count": 0}
+    pct_range = pct_end - pct_start
+    msg_count = len(messages)
+    # How many tokens (approx) before rotating to next message
+    chars_per_message = 2000  # ~500 tokens, rough estimate
+
+    def callback(event_type: str, detail: str):
+        if event_type == "web_search":
+            if detail == "searching":
+                msg = WEB_SEARCH_MESSAGES[state["web_search_count"] % len(WEB_SEARCH_MESSAGES)]
+                state["web_search_count"] += 1
+                progress_manager.update_message(job_id, msg)
+            # On web_search completed, resume the section message
+            elif detail == "completed":
+                idx = min(state["msg_index"], msg_count - 1)
+                progress_manager.update_message(job_id, messages[idx])
+
+        elif event_type == "text_progress":
+            char_count = int(detail) if detail.isdigit() else 0
+            # Rotate message based on characters generated
+            new_idx = min(char_count // chars_per_message, msg_count - 1)
+            if new_idx != state["msg_index"]:
+                state["msg_index"] = new_idx
+                progress_manager.update_message(job_id, messages[new_idx])
+            # Increment percentage proportionally
+            pct_step = max(1, pct_range // (msg_count * 2))
+            progress_manager.increment_percentage(job_id, pct_step, pct_end)
+
+    return callback
+
+
 def _run_generation_pipeline(job_id: str):
     """
-    Pipeline with progress tracking:
+    Pipeline with streaming progress tracking:
     1. Load raw platform data
-    2. Generate each report individually (with progress updates between)
+    2. Generate each report with streaming LLM calls (live progress messages)
     3. Store reports
     4. Send email
     """
@@ -38,26 +115,35 @@ def _run_generation_pipeline(job_id: str):
         loader = RawDataLoader(db)
         raw_data = loader.load_job_raw_data(job_id)
 
-        # Phase 2: Generate reports individually with progress tracking
+        # Phase 2: Generate reports with streaming progress
         report_gen = ReportGenerator()
         context = report_gen._build_llm_context(raw_data)
 
+        # Extensive report: 10% → 48%
         progress_manager.update(job_id, "generating_extensive")
-        extensive = report_gen._call_llm(
+        extensive_cb = _make_progress_callback(job_id, "generating_extensive", 10, 48, EXTENSIVE_MESSAGES)
+        extensive = report_gen._call_llm_streaming(
             report_gen._build_system_message("extensive"),
             report_gen._extensive_prompt(context),
+            progress_callback=extensive_cb,
         )
 
+        # Developer report: 50% → 78%
         progress_manager.update(job_id, "generating_developer")
-        developer = report_gen._call_llm(
+        developer_cb = _make_progress_callback(job_id, "generating_developer", 50, 78, DEVELOPER_MESSAGES)
+        developer = report_gen._call_llm_streaming(
             report_gen._build_system_message("developer"),
             report_gen._developer_prompt(context),
+            progress_callback=developer_cb,
         )
 
+        # Recruiter report: 80% → 93%
         progress_manager.update(job_id, "generating_recruiter")
-        recruiter = report_gen._call_llm(
+        recruiter_cb = _make_progress_callback(job_id, "generating_recruiter", 80, 93, RECRUITER_MESSAGES)
+        recruiter = report_gen._call_llm_streaming(
             report_gen._build_system_message("recruiter"),
             report_gen._recruiter_prompt(context),
+            progress_callback=recruiter_cb,
         )
 
         reports = {

@@ -11,9 +11,10 @@ every statement is traceable back to a specific field in the raw platform data.
 """
 
 from datetime import date
-from typing import Dict, Any
+from typing import Dict, Any, Callable, Optional
 from openai import OpenAI
 import json
+import time
 import logging
 from app.config import settings
 
@@ -98,24 +99,6 @@ class ReportGenerator:
         if not api_key:
             raise ValueError("OPENAI_API_KEY not configured. Set it in cred-service/.env")
         self.client = OpenAI(api_key=api_key)
-
-    # =========================================
-    # PUBLIC ENTRY
-    # =========================================
-
-    def generate_reports(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate all 3 reports in one call. Use individual methods for progress tracking."""
-        context = self._build_llm_context(raw_data)
-
-        extensive = self._call_llm(self._build_system_message("extensive"), self._extensive_prompt(context))
-        developer = self._call_llm(self._build_system_message("developer"), self._developer_prompt(context))
-        recruiter = self._call_llm(self._build_system_message("recruiter"), self._recruiter_prompt(context))
-
-        return {
-            "extensive_report": extensive,
-            "developer_insight": developer,
-            "recruiter_insight": recruiter,
-        }
 
     def _build_system_message(self, report_type: str = "extensive") -> str:
         """Build system message with guardrails + citation mode for the report type."""
@@ -364,3 +347,64 @@ End the report with this section:
             raise ValueError("LLM returned empty response")
 
         return response.output_text
+
+    def _call_llm_streaming(
+        self,
+        system: str,
+        prompt: str,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
+    ) -> str:
+        """
+        Streaming LLM call with progress callbacks.
+        Falls back to _call_llm() if streaming fails.
+
+        progress_callback(event_type, detail):
+            event_type: "web_search" | "text_progress"
+            detail: descriptive string (e.g., "searching" or token count)
+        """
+        try:
+            stream = self.client.responses.create(
+                model=self.model,
+                tools=[{"type": "web_search_preview"}],
+                tool_choice="auto",
+                input=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
+                ],
+                stream=True,
+            )
+
+            full_text = ""
+            last_callback_time = time.time()
+            callback_interval = 4  # seconds between text progress callbacks
+
+            for event in stream:
+                event_type = getattr(event, "type", "")
+
+                # Web search events — fire callback immediately
+                if event_type == "response.web_search_call.searching":
+                    if progress_callback:
+                        progress_callback("web_search", "searching")
+
+                elif event_type == "response.web_search_call.completed":
+                    if progress_callback:
+                        progress_callback("web_search", "completed")
+
+                # Text delta events — accumulate and fire periodically
+                elif event_type == "response.output_text.delta":
+                    delta = getattr(event, "delta", "")
+                    full_text += delta
+
+                    now = time.time()
+                    if progress_callback and (now - last_callback_time) >= callback_interval:
+                        last_callback_time = now
+                        progress_callback("text_progress", str(len(full_text)))
+
+            if not full_text:
+                raise ValueError("LLM streaming returned empty response")
+
+            return full_text
+
+        except Exception as e:
+            logger.warning(f"Streaming LLM call failed, falling back to non-streaming: {e}")
+            return self._call_llm(system, prompt)
