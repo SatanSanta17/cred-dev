@@ -4,11 +4,11 @@ import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TryForm, type TryFormData } from './try-form'
 import { GenerationLoader } from './generation-loader'
-import { submitExtraction, getExtractionStatus, triggerGeneration } from '@/lib/api'
+import { submitExtraction, getExtractionStatus, triggerGeneration, resendEmail } from '@/lib/api'
 import { useGenerationProgress } from '@/lib/use-generation-progress'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, XCircle, RotateCcw, Mail, Loader2, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, XCircle, RotateCcw, Mail, Loader2, ArrowLeft, AlertTriangle, Send } from 'lucide-react'
 import Link from 'next/link'
 
 type FlowState = 'form' | 'extracting' | 'generating' | 'success' | 'error'
@@ -20,6 +20,9 @@ export function TryFlow() {
   const [candidateEmail, setCandidateEmail] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+  const [emailFailed, setEmailFailed] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const pollCountRef = useRef(0)
 
@@ -30,6 +33,9 @@ export function TryFlow() {
 
   // Watch for SSE completion or failure
   if (state === 'generating' && progress?.status === 'completed') {
+    if (progress.email_failed) {
+      setEmailFailed(true)
+    }
     setState('success')
   }
   if (state === 'generating' && (progress?.status === 'failed' || sseError)) {
@@ -126,8 +132,27 @@ export function TryFlow() {
     setJobId(null)
     setErrorMessage('')
     setFormLoading(false)
+    setEmailFailed(false)
+    setResendLoading(false)
+    setEmailSent(false)
     setState('form')
   }, [cleanup, resetSSE])
+
+  const handleResendEmail = useCallback(async () => {
+    if (!jobId || resendLoading) return
+    setResendLoading(true)
+    try {
+      await resendEmail(jobId)
+      setEmailFailed(false)
+      setEmailSent(true)
+      toast.success('Reports sent to your email!')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to resend email'
+      toast.error(msg)
+    } finally {
+      setResendLoading(false)
+    }
+  }, [jobId, resendLoading])
 
   return (
     <div className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center px-6 py-12">
@@ -213,12 +238,37 @@ export function TryFlow() {
                 <p className="text-gray-300 mb-2">
                   Your credibility report has been created successfully.
                 </p>
-                {candidateEmail && (
+                {emailFailed ? (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-center gap-2 text-sm text-amber-400 mb-3">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Email delivery failed — your reports are saved</span>
+                    </div>
+                    <Button
+                      onClick={handleResendEmail}
+                      disabled={resendLoading}
+                      size="sm"
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    >
+                      {resendLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          Resend Email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : candidateEmail ? (
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6">
                     <Mail className="w-4 h-4" />
-                    <span>Sent to {candidateEmail}</span>
+                    <span>{emailSent ? 'Resent' : 'Sent'} to {candidateEmail}</span>
                   </div>
-                )}
+                ) : null}
                 <div className="flex flex-col gap-3 mt-6">
                   <Button
                     onClick={handleRetry}

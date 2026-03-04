@@ -32,7 +32,7 @@ class ProgressManager:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def update(self, job_id: str, stage: str):
+    def update(self, job_id: str, stage: str, extra: dict = None):
         info = STAGES.get(stage, {"pct": 0, "msg": stage})
         entry = {
             "stage": stage,
@@ -43,6 +43,9 @@ class ProgressManager:
         # Add 'status' for terminal stages so frontend can detect completion
         if stage in ("completed", "failed"):
             entry["status"] = stage
+        # Merge any extra data (e.g., email_failed flag)
+        if extra:
+            entry.update(extra)
         self._jobs[job_id] = entry
 
     def get(self, job_id: str) -> Optional[Dict]:

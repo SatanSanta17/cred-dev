@@ -9,6 +9,7 @@ export interface ProgressData {
   message: string
   status?: string
   error?: string
+  email_failed?: boolean
 }
 
 // Fallback messages when SSE disconnects — cycle every 30s

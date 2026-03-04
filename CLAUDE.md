@@ -18,6 +18,7 @@ Stack: Next.js 16 (Vercel) + FastAPI (Render) + Supabase (PostgreSQL) + OpenAI G
 
 ## Critical Rules — Do NOT Violate
 
+- **No code changes without a documented PRD.** Every feature, fix, or refactor must have a written PRD (Product Requirements Document) reviewed and approved before any code is touched. No exceptions — not even "small" changes.
 - **Never add "generating" to allowed statuses in `generate.py`.** Allowed list is `["extracted", "failed", "completed"]`. The frontend `generationTriggered` flag prevents duplicate triggers. We explicitly decided this.
 - **Never remove the `safe_extraction()` wrapper in `extract.py`.** It catches background task crashes and marks jobs as "failed". Without it, jobs get stuck on "pending" forever.
 - **Never remove the `MAX_POLLS=40` limit or `generationTriggered` guard in `try-flow.tsx`.** These prevent infinite polling and duplicate generation calls.

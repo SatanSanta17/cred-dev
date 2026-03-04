@@ -138,6 +138,7 @@ getExtractionStatus(jobId)      → GET  /api/v1/extract/{id}
 triggerGeneration(jobId)        → POST /api/v1/generate/{id}
 getGenerationStatus(jobId)      → GET  /api/v1/generate/{id}
 getSSEUrl(jobId)                → builds SSE URL for EventSource
+resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 ```
 
 #### Frontend Environment Variables
@@ -165,6 +166,7 @@ getSSEUrl(jobId)                → builds SSE URL for EventSource
 | POST | `/api/v1/generate/{job_id}` | `generate.generate_reports` | Trigger LLM report generation |
 | GET | `/api/v1/generate/{job_id}` | `generate.get_generation_status` | Poll generation status, returns reports when done |
 | GET | `/api/v1/generate/{job_id}/stream` | `stream.stream_generation_progress` | SSE endpoint for real-time progress |
+| POST | `/api/v1/generate/{job_id}/resend-email` | `generate.resend_email` | Resend report emails for a completed job |
 | GET | `/health` | `main.health_check` | Health check (used by Render) |
 
 #### Service Layer
@@ -179,7 +181,7 @@ getSSEUrl(jobId)                → builds SSE URL for EventSource
 | `RawDataLoader` | `services/raw_data_loader.py` | Reads raw_data table rows for a job, returns `{resume: {}, github: {}, leetcode: {}, linkedin: {}}` bundle. |
 | `ReportGenerator` | `services/report_generator.py` | Calls OpenAI GPT-5-mini (with web_search_preview tool) three times — one per report type. System message includes 7 immutable guardrails. Extensive report uses inline citations; developer and recruiter reports use natural prose with end-of-report disclaimers. |
 | `ReportStorageService` | `services/report_storage.py` | Stores 4 records per job: raw_signals (JSON), extensive_report, developer_insight, recruiter_insight (text). |
-| `ProgressManager` | `services/progress_manager.py` | In-memory singleton dict. Maps job_id → {stage, percentage, message, timestamp}. SSE endpoint reads from this every 1 second. |
+| `ProgressManager` | `services/progress_manager.py` | In-memory singleton dict. Maps job_id → {stage, percentage, message, timestamp}. SSE endpoint reads from this every 1 second. Supports `extra` dict merge for additional data (e.g., `email_failed` flag). |
 | `get_email_service()` | `services/email_service.py` | Factory: Brevo (if `BREVO_API_KEY`) > Resend (if `RESEND_API_KEY`, deprecated) > SMTP (fallback). All three services share the same `send_reports(to_email, candidate_name, reports)` interface. |
 | PDF Generation | `services/email_service.py` | `generate_report_pdf()` — converts markdown-like report text to styled PDFs using reportlab. CredDev branding (purple accent, header line, page footer). |
 
@@ -202,6 +204,8 @@ async def safe_extraction():
 **Email is non-fatal:**
 - Email failure in generation pipeline is caught and logged but doesn't fail the job
 - Reports are still stored in DB even if email fails
+- SSE progress includes `email_failed: true` flag so the frontend can show a resend button
+- Users can retry email delivery via `POST /api/v1/generate/{job_id}/resend-email`
 
 #### LLM Guardrails (system message — all 3 reports)
 
@@ -393,6 +397,8 @@ cred-dev/
 ├── package.json                  # Node dependencies
 ├── README.md                     # Project overview
 ├── ARCHITECTURE.md               # This file
+├── CLAUDE.md                     # Project instructions for Claude sessions
+├── CHANGELOG.md                  # Version history
 └── .gitignore
 ```
 

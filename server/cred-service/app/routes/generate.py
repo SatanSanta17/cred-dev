@@ -76,6 +76,7 @@ def _run_generation_pipeline(job_id: str):
 
         # Phase 4: Send email
         progress_manager.update(job_id, "sending_email")
+        email_error = None
         try:
             email_service = get_email_service()
             email_service.send_reports(
@@ -85,12 +86,14 @@ def _run_generation_pipeline(job_id: str):
             )
         except Exception as email_err:
             logger.warning(f"Email failed for {job_id}: {email_err}")
+            email_error = str(email_err)
             # Email failure is non-fatal — reports are still stored
 
-        # Done
-        progress_manager.update(job_id, "completed")
+        # Done — include email_failed flag in SSE so frontend can show resend button
+        extra = {"email_failed": True} if email_error else {}
+        progress_manager.update(job_id, "completed", extra=extra)
         job.status = "completed"
-        job.error_message = None
+        job.error_message = f"email_failed: {email_error}" if email_error else None
         job.updated_at = datetime.utcnow()
         db.commit()
 
@@ -182,3 +185,61 @@ async def get_generation_status(job_id: str, db: Session = Depends(get_db)):
             "progress": progress,
             "message": f"Current status: {job.status}. Poll again for updates."
         }
+
+
+@router.post("/generate/{job_id}/resend-email")
+async def resend_email(job_id: str, db: Session = Depends(get_db)):
+    """
+    Resend report emails for a completed job.
+    Only works when job status is 'completed' and reports exist in DB.
+    """
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot resend email. Job status is '{job.status}', must be 'completed'."
+        )
+
+    if not job.candidate_email:
+        raise HTTPException(status_code=400, detail="No email address on file for this job.")
+
+    # Load stored reports
+    storage = ReportStorageService()
+    stored = storage.get_reports(job_id)
+
+    # Extract only the text reports (not raw_signals)
+    reports = {
+        k: v for k, v in stored.items()
+        if k in ("extensive_report", "developer_insight", "recruiter_insight") and v
+    }
+
+    if not reports:
+        raise HTTPException(status_code=400, detail="No reports found for this job.")
+
+    try:
+        email_service = get_email_service()
+        email_service.send_reports(
+            to_email=job.candidate_email,
+            candidate_name=job.candidate_name,
+            reports=reports,
+        )
+    except Exception as e:
+        logger.error(f"Resend email failed for {job_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Email delivery failed: {str(e)}")
+
+    # Clear the email_failed error message since email succeeded now
+    job.error_message = None
+    job.updated_at = datetime.utcnow()
+    db.commit()
+
+    logger.info(f"Resend email successful for {job_id} to {job.candidate_email}")
+
+    return {
+        "job_id": job_id,
+        "status": "sent",
+        "message": f"Reports resent to {job.candidate_email}"
+    }

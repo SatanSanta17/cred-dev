@@ -90,3 +90,16 @@ export async function getGenerationStatus(jobId: string): Promise<GenerationResp
 export function getSSEUrl(jobId: string): string {
   return `${API_BASE}/api/v1/generate/${jobId}/stream`
 }
+
+export async function resendEmail(jobId: string): Promise<{ status: string; message: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/generate/${jobId}/resend-email`, {
+    method: 'POST',
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Network error' }))
+    throw new Error(err.detail || `Resend failed (${res.status})`)
+  }
+
+  return res.json()
+}
