@@ -36,7 +36,7 @@ server/cred-service/
 │       └── stream.py           # GET /generate/{job_id}/stream (SSE)
 ├── services/
 │   ├── extraction.py           # Orchestrates platform fetchers
-│   ├── github_fetcher.py       # GitHub API (repos, languages, activity)
+│   ├── github_fetcher.py       # GitHub API (2 queries: repos/profile + production signals)
 │   ├── leetcode_fetcher.py     # LeetCode GraphQL API
 │   ├── linkedin_fetcher.py     # LinkedIn URL/username capture
 │   ├── resume_parser.py        # PDF resume text extraction (PyPDF2)

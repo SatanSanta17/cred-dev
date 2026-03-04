@@ -174,14 +174,14 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 | Service | File | What It Does |
 |---------|------|--------------|
 | `ExtractionService` | `services/extraction.py` | Orchestrates data fetching from all platforms. Each platform is independent — one failure doesn't block others. Marks job "extracted" when at least one source succeeds, "failed" only if ALL sources fail. |
-| `GitHubFetcher` | `services/github_fetcher.py` | Single GraphQL query to GitHub API. Returns raw response — repos (100), PRs (50), contributions calendar, profile data. Requires `GITHUB_TOKEN`. |
+| `GitHubFetcher` | `services/github_fetcher.py` | Two-query architecture: Query 1 fetches profile, 100 repos (lightweight), pinned repos, organizations, and language bytes. Query 2 fetches production readiness signals (README, Dockerfile, CI, tests, .env.example, dependency files) for the top 15 repos (by stars), batched in groups of 5 to stay within GitHub's query complexity limit. Returns raw merged response. Requires `GITHUB_TOKEN`. |
 | `LeetCodeFetcher` | `services/leetcode_fetcher.py` | Single GraphQL query to LeetCode's public API. Returns raw response — submission stats, tag problem counts, contest ranking, recent submissions (100), badges. Uses browser-like headers. |
 | `LinkedInFetcher` | `services/linkedin_fetcher.py` | Stub — records URL and extracted username only. LinkedIn blocks scraping (HTTP 999). Future: OAuth integration. |
 | `ResumeParser` | `services/resume_parser.py` | Extracts raw text from PDF using PyPDF2. No structured parsing — LLM does all reasoning from raw text. |
 | `RawDataLoader` | `services/raw_data_loader.py` | Reads raw_data table rows for a job, returns `{resume: {}, github: {}, leetcode: {}, linkedin: {}}` bundle. |
-| `ReportGenerator` | `services/report_generator.py` | Calls OpenAI GPT-5-mini (with web_search_preview tool) three times — one per report type. System message includes 7 immutable guardrails. Extensive report uses inline citations; developer and recruiter reports use natural prose with end-of-report disclaimers. |
+| `ReportGenerator` | `services/report_generator.py` | Calls OpenAI GPT-5-mini (with web_search_preview tool) three times — one per report type. System message includes 7 immutable guardrails. Extensive report uses inline citations; developer and recruiter reports use natural prose with end-of-report disclaimers. Supports streaming via `_call_llm_streaming()` with progress callbacks — falls back to non-streaming on failure. |
 | `ReportStorageService` | `services/report_storage.py` | Stores 4 records per job: raw_signals (JSON), extensive_report, developer_insight, recruiter_insight (text). |
-| `ProgressManager` | `services/progress_manager.py` | In-memory singleton dict. Maps job_id → {stage, percentage, message, timestamp}. SSE endpoint reads from this every 1 second. Supports `extra` dict merge for additional data (e.g., `email_failed` flag). |
+| `ProgressManager` | `services/progress_manager.py` | In-memory singleton dict. Maps job_id → {stage, percentage, message, timestamp}. SSE endpoint reads from this every 1 second. Supports `extra` dict merge, `update_message()` for live message changes, and `increment_percentage()` for smooth progress within stage ranges. |
 | `get_email_service()` | `services/email_service.py` | Factory: Brevo (if `BREVO_API_KEY`) > Resend (if `RESEND_API_KEY`, deprecated) > SMTP (fallback). All three services share the same `send_reports(to_email, candidate_name, reports)` interface. |
 | PDF Generation | `services/email_service.py` | `generate_report_pdf()` — converts markdown-like report text to styled PDFs using reportlab. CredDev branding (purple accent, header line, page footer). |
 
@@ -281,7 +281,7 @@ async def safe_extraction():
 
 | Service | Purpose | Auth | Free Tier |
 |---------|---------|------|-----------|
-| **GitHub GraphQL API** | Repos, PRs, contributions, profile | `GITHUB_TOKEN` (PAT) | 5,000 requests/hour |
+| **GitHub GraphQL API** | Repos, PRs, contributions, profile, production signals | `GITHUB_TOKEN` (PAT) | 5,000 requests/hour (up to 4 calls per extraction) |
 | **LeetCode GraphQL API** | Submissions, stats, contests, badges | No auth (browser headers) | Public endpoint |
 | **OpenAI API** | GPT-5-mini with web_search_preview for report generation | `OPENAI_API_KEY` | Pay per token |
 | **Brevo Transactional API** | Send PDF reports via email | `BREVO_API_KEY` | 300 emails/day |

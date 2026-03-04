@@ -8,7 +8,7 @@ from datetime import datetime
 
 STAGES = {
     "loading_data":          {"pct": 5,   "msg": "Loading extracted platform data..."},
-    "generating_extensive":  {"pct": 15,  "msg": "Generating comprehensive technical report..."},
+    "generating_extensive":  {"pct": 10,  "msg": "Generating comprehensive technical report..."},
     "generating_developer":  {"pct": 50,  "msg": "Creating developer growth insights..."},
     "generating_recruiter":  {"pct": 80,  "msg": "Preparing recruiter hiring signal..."},
     "storing":               {"pct": 95,  "msg": "Storing your credibility reports..."},
@@ -47,6 +47,20 @@ class ProgressManager:
         if extra:
             entry.update(extra)
         self._jobs[job_id] = entry
+
+    def update_message(self, job_id: str, message: str):
+        """Update only the message field — keeps current stage and percentage."""
+        entry = self._jobs.get(job_id)
+        if entry:
+            entry["message"] = message
+            entry["timestamp"] = datetime.utcnow().isoformat()
+
+    def increment_percentage(self, job_id: str, delta: int, max_pct: int):
+        """Nudge percentage up by delta, capped at max_pct."""
+        entry = self._jobs.get(job_id)
+        if entry:
+            entry["percentage"] = min(entry["percentage"] + delta, max_pct)
+            entry["timestamp"] = datetime.utcnow().isoformat()
 
     def get(self, job_id: str) -> Optional[Dict]:
         return self._jobs.get(job_id)
