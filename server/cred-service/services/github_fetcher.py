@@ -184,8 +184,9 @@ class GitHubFetcher:
         ]
 
         # Sort by stars descending, then pushedAt descending as tiebreaker
+        # pushedAt can be None for empty repos — default to "" to avoid TypeError in tuple comparison
         eligible.sort(
-            key=lambda r: (r.get("stargazerCount", 0), r.get("pushedAt", "")),
+            key=lambda r: (r.get("stargazerCount", 0), r.get("pushedAt") or ""),
             reverse=True,
         )
 
