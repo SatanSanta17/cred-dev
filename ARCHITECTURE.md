@@ -110,7 +110,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 
 | Route | File | Purpose |
 |-------|------|---------|
-| `/` | `app/page.tsx` | Landing page — Hero, Problem, HowItWorks, SampleOutput, ForDevelopers, ForRecruiters, Footer |
+| `/` | `app/page.tsx` | Landing page — Hero, HowItWorks, ProblemValidation, Footer |
 | `/try` | `app/try/page.tsx` | Report generation flow — TryForm → extracting → generating → success/error |
 | `/waitlist` | `app/waitlist/page.tsx` | Standalone waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
@@ -329,22 +329,18 @@ cred-dev/
 │       └── Pradeep/page.tsx
 ├── components/
 │   ├── sections/                 # Page-level components
-│   │   ├── hero.tsx
-│   │   ├── problem.tsx
-│   │   ├── how-it-works.tsx
-│   │   ├── sample-output.tsx
-│   │   ├── for-developers.tsx
-│   │   ├── for-recruiters.tsx
+│   │   ├── hero.tsx              # Landing: developer-focused hero, mobile-first
+│   │   ├── how-it-works.tsx      # Landing: compact 3-step process
+│   │   ├── problem-validation.tsx # Landing: rotating quotes from real conversations
+│   │   ├── footer.tsx            # Landing: condensed CTA + copyright
 │   │   ├── why-now.tsx
 │   │   ├── trust.tsx
-│   │   ├── footer.tsx
 │   │   ├── founder-note.tsx
 │   │   ├── try-flow.tsx          # Core: form → extract → generate → result
 │   │   ├── try-form.tsx          # Input form with zod validation
 │   │   ├── generation-loader.tsx # Animated progress display
 │   │   └── waitlist-form.tsx     # Supabase direct insert
 │   ├── shared/                   # Reusable components
-│   │   ├── floating-card.tsx
 │   │   ├── gradient-text.tsx
 │   │   └── waitlist-count.tsx    # Real-time waitlist counter
 │   └── ui/                       # shadcn/ui primitives

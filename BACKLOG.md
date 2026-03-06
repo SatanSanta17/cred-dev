@@ -24,8 +24,8 @@ Items noted for future work. Each requires a proper PRD before implementation.
 
 ## Exploratory / Long-Term Vision
 
-- **AI Collaboration Sandbox** — A sandboxed chat environment within CredDev where candidates interact with an LLM on a system design problem tailored to their background (from GitHub/LeetCode/resume data). No copy-paste from outside, no audio — pure back-and-forth conversation. The objective is not to test knowledge but to assess how the candidate approaches problems, what clarifying questions they ask, and how they command the LLM. Evaluation based on thinking process, not answers.
-specific rubrics: did the candidate ask clarifying questions before jumping in? Did they challenge assumptions? Did they break the problem into components? Did they iterate when the LLM pushed back? These are measurable signals
+- **AI Collaboration Sandbox** — A sandboxed chat environment within CredDev where candidates interact with an LLM on a system design problem tailored to their background (from GitHub/LeetCode/resume data). No copy-paste from outside, no audio — pure back-and-forth conversation. The objective is not to test knowledge but to assess how the candidate approaches problems, what clarifying questions they ask, and how they command the LLM. Evaluation based on thinking process, not answers. Specific rubrics: did the candidate ask clarifying questions before jumping in? Did they challenge assumptions? Did they break the problem into components? Did they iterate when the LLM pushed back? These are measurable signals.
+- **Job Portal Integration** — Build CredDev as a layer that sits on top of existing job portals (or an organization's own job portal). When a company publishes a job opening, CredDev takes over the application flow — the candidate applies by filling the form, provides their profiles, schedules a sandbox interview time, and completes their application. This embeds CredDev into the recruiter's existing workflow instead of asking them to adopt a new tool. Easier adoption, zero workflow change for recruiters.
 
 ## Technical Debt
 

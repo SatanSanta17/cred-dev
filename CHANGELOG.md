@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-03-06] — Developer-Focused Landing Page (PRD-003)
+
+### Added
+- `components/sections/problem-validation.tsx` — new section with rotating quotes from developer/recruiter conversations validating the hiring problem. Displays 3 quotes at a glance (desktop), 1 on mobile. Auto-rotates every 5s if more than 3 quotes exist, pauses on hover. Editable via a single `QUOTES` array. Includes real sample report link and waitlist count.
+
+### Changed
+- `app/page.tsx` — reduced from 7 sections to 4: Hero, HowItWorks, ProblemValidation, Footer
+- `components/sections/hero.tsx` — rewritten: developer-only messaging ("Your code speaks. We verify it."), single CTA ("Generate Your Free Report"), mobile-first (no hidden elements), removed floating metric cards and waitlist link
+- `components/sections/how-it-works.tsx` — rewritten: compact 3-step layout (horizontal on desktop, vertical on mobile), removed feature badges, fixed inaccurate copy ("One-click OAuth" → actual username input flow)
+- `components/sections/footer.tsx` — simplified: single CTA + copyright + email contact, removed multi-column link grid
+
+### Removed
+- `components/sections/problem.tsx` — recruiter-framed problem section
+- `components/sections/sample-output.tsx` — hardcoded fake scores (87/100, "Top 15%") that didn't exist in the real product
+- `components/sections/for-developers.tsx` — 6 benefit cards consolidated into hero
+- `components/sections/for-recruiters.tsx` — premature recruiter pitch (no recruiter flow exists)
+- `components/shared/floating-card.tsx` — no longer used (was only in hero)
+- `react-countup` package — was only used in sample-output.tsx
+
 ## [2026-03-04] — Enriched GitHub Data (PRD-002)
 
 ### Added

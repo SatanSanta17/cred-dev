@@ -2,45 +2,11 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Sparkles, Github, Code2, Award, ExternalLink, Zap } from 'lucide-react'
+import { ArrowRight, Zap, ExternalLink } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
-import { FloatingCard } from '@/components/shared/floating-card'
 import Link from 'next/link'
 
 export function Hero() {
-  const CREDDEV_METRICS = [
-    {
-      id: 'problem-solving',
-      icon: Code2,
-      iconColor: 'text-green-400',
-      label: 'Problem Solving',
-      gradientFrom: 'from-green-400',
-      gradientTo: 'to-emerald-600',
-      source: 'LeetCode Analysis',
-      delay: 0.9
-    },
-    {
-      id: 'engineering',
-      icon: Github,
-      iconColor: 'text-blue-400',
-      label: 'Engineering',
-      gradientFrom: 'from-blue-400',
-      gradientTo: 'to-cyan-600',
-      source: 'GitHub Contributions',
-      delay: 1.0
-    },
-    {
-      id: 'consistency',
-      icon: Award,
-      iconColor: 'text-purple-400',
-      label: 'Consistency',
-      gradientFrom: 'from-purple-400',
-      gradientTo: 'to-pink-600',
-      source: 'Activity Score',
-      delay: 1.1
-    }
-  ]
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-black via-slate-900 to-black">
       {/* Animated Background Grid */}
@@ -56,127 +22,66 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center max-w-5xl mx-auto"
+          className="text-center max-w-4xl mx-auto"
         >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 backdrop-blur-sm mb-8"
-          >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm text-purple-300">AI-Powered Developer Verification</span>
-          </motion.div>
-
           {/* Main Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight"
+            transition={{ delay: 0.2 }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
           >
-            <GradientText>CredDev</GradientText>
+            Your code speaks.{' '}
+            <GradientText>We verify it.</GradientText>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-lg sm:text-xl md:text-2xl text-gray-300 font-light mb-10 max-w-2xl mx-auto px-4"
+          >
+            AI-powered credibility reports from your GitHub, LeetCode, and resume
+          </motion.p>
+
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="text-xl sm:text-2xl md:text-3xl text-gray-300 font-light mb-4 px-4"
+            className="flex flex-col items-center gap-4"
           >
-            The credibility layer for developers
-          </motion.p>
+            <Link href="/try">
+              <Button
+                size="lg"
+                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
+              >
+                <Zap className="mr-2 w-5 h-5" />
+                Generate Your Free Report
+                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-lg sm:text-xl text-gray-400 mb-12 max-w-2xl mx-auto px-4"
-          >
-            Verify skills. Build trust. Get discovered.
-          </motion.p>
+            <Link
+              href="/report/Burhanuddin"
+              target="_blank"
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-purple-400 transition-colors text-sm sm:text-base"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Sample Report
+            </Link>
 
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-col items-center gap-4 mb-20"
-          >
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/try">
-                <Button
-                  size="lg"
-                  className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
-                >
-                  <Zap className="mr-2 w-5 h-5" />
-                  Try Now — Free
-                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link href="/report/Burhanuddin" target="_blank">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-6 h-auto border-gray-700 hover:bg-gray-800 gap-2"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  View Sample Report
-                </Button>
-              </Link>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 mt-2">
-              <Link href="/waitlist">
-                <span className="text-sm text-gray-500 hover:text-purple-400 transition-colors cursor-pointer underline underline-offset-4">
-                  Or join the waitlist for early access
-                </span>
-              </Link>
-            </div>
-          </motion.div>
-
-          {/* Floating Cards Preview */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="hidden md:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto px-4 mb-8"
-          >
-            {CREDDEV_METRICS.map((metric) => {
-              const Icon = metric.icon
-              return (
-                <FloatingCard key={metric.id} delay={metric.delay}>
-                  <div className="text-left">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Icon className={`w-5 h-5 ${metric.iconColor}`} />
-                      <div className="text-sm text-gray-400">{metric.label}</div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-2">{metric.source}</div>
-                  </div>
-                </FloatingCard>
-              )
-            })}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-sm text-gray-500 mt-2"
+            >
+              Takes 2 minutes. No sign-up required.
+            </motion.p>
           </motion.div>
         </motion.div>
       </div>
-
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
-      >
-        <div className="flex flex-col items-center gap-2 text-gray-500">
-          <span className="text-sm">Scroll to explore</span>
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <ArrowRight className="w-5 h-5 rotate-90" />
-          </motion.div>
-        </div>
-      </motion.div>
     </section>
   )
 }
