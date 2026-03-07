@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-03-06] — Honest Sample Report Page (PRD-004)
+
+### Changed
+- `app/report/Burhanuddin/page.tsx` — complete rewrite. Replaced fabricated score dashboard (82/100, "Top 18-20%", "Hire Confidence 85%", "3% scam probability") with honest representation of real CredDev report output. Now shows: verdict from actual report, VERIFIED/UNVERIFIED skill tags, real LeetCode numbers (555 problems, 98.58% acceptance), production signals per repo, work history (labeled as resume-sourced), risk flags shown honestly. Collapsible source citations for each section.
+
+### Added
+- `public/reports/Burhanuddin_Comprehensive_Report.pdf` — downloadable full 9-page report PDF
+- "Download Full PDF" button on the sample report page
+
+### Removed
+- All fabricated metrics: overall score, category scores, percentiles, hire confidence, scam probability, interview readiness badges, "Analysis Engine v1.0 • Confidence: 95%", fake Crunchbase/TechCrunch verification claims
+- `Progress` component import (was used for fake score bars)
+
 ## [2026-03-06] — Developer-Focused Landing Page (PRD-003)
 
 ### Added

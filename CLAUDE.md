@@ -27,6 +27,24 @@ Stack: Next.js 16 (Vercel) + FastAPI (Render) + Supabase (PostgreSQL) + OpenAI G
 - **Never remove the `MAX_POLLS=40` limit or `generationTriggered` guard in `try-flow.tsx`.** These prevent infinite polling and duplicate generation calls.
 - **Email failure must never fail the job.** In `generate.py`, the email send is wrapped in try/except — reports are still stored even if email fails.
 
+## Development Practices — SOLID & Clean Code
+
+These principles apply to every change across both frontend and backend.
+
+- **Single Responsibility (S).** Each file, component, and function does one thing. If a component handles both UI rendering and data fetching, split them. If a service method does validation and persistence, separate them.
+- **Open/Closed (O).** Extend behavior without modifying existing code. Use props, composition, and factory patterns (like `get_email_service()`) instead of editing working code to add new behavior.
+- **Liskov Substitution (L).** All implementations of an interface must be interchangeable. Every email provider implements `send_reports()` identically. Every shared component works with its default props alone.
+- **Interface Segregation (I).** Don't force consumers to depend on things they don't use. Keep component prop interfaces minimal. Keep service methods focused — don't add optional parameters that only one caller needs.
+- **Dependency Inversion (D).** High-level modules should not depend on low-level details. Route handlers call service classes, not raw DB queries. Components consume props, not global state.
+
+Additional practices:
+
+- **DRY — Extract shared patterns into reusable components.** If the same UI pattern or logic appears in two or more places, extract it into `components/shared/` (frontend) or a service method (backend). See `BackLink`, `GradientText` as examples.
+- **Delete dead code immediately.** Unused files, imports, and components are never left "just in case." If it's not imported anywhere, it's deleted.
+- **Naming reflects purpose.** File names, component names, and function names describe what they do — not how they're implemented. `BackLink` not `ArrowLeftLink`. `safe_extraction()` not `wrapper_v2()`.
+- **Composition over inheritance.** Build complex components by composing simple ones. Use props and children, not deep class hierarchies.
+- **Fail explicitly.** Errors are caught, logged, and surfaced to the user — never silently swallowed (except where explicitly documented, like email failure not failing the job).
+
 ## Backend Conventions
 
 ### Backend Services Architecture

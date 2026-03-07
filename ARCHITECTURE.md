@@ -114,7 +114,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `/try` | `app/try/page.tsx` | Report generation flow — TryForm → extracting → generating → success/error |
 | `/waitlist` | `app/waitlist/page.tsx` | Standalone waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
-| `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Static sample report page |
+| `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Honest sample report page — real data from actual CredDev report (VERIFIED/UNVERIFIED skills, LeetCode stats, production signals, risk flags). PDF download available. |
 | `/report/Pradeep` | `app/report/Pradeep/page.tsx` | Static sample report page |
 
 #### Key Frontend Components
@@ -333,14 +333,12 @@ cred-dev/
 │   │   ├── how-it-works.tsx      # Landing: compact 3-step process
 │   │   ├── problem-validation.tsx # Landing: rotating quotes from real conversations
 │   │   ├── footer.tsx            # Landing: condensed CTA + copyright
-│   │   ├── why-now.tsx
-│   │   ├── trust.tsx
-│   │   ├── founder-note.tsx
 │   │   ├── try-flow.tsx          # Core: form → extract → generate → result
 │   │   ├── try-form.tsx          # Input form with zod validation
 │   │   ├── generation-loader.tsx # Animated progress display
 │   │   └── waitlist-form.tsx     # Supabase direct insert
 │   ├── shared/                   # Reusable components
+│   │   ├── back-link.tsx         # Back navigation (used on /try, /report)
 │   │   ├── gradient-text.tsx
 │   │   └── waitlist-count.tsx    # Real-time waitlist counter
 │   └── ui/                       # shadcn/ui primitives
