@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-03-08] — Recruiter Landing Page + Waitlist Cleanup (PRD-006)
+
+### Added
+- `/recruiters` page — "coming soon" teaser with recruiter-specific hero, product vision (candidate reports + developer directory), pain point quotes (placeholders), and recruiter-only waitlist form
+- "For Recruiters" link in the landing page footer
+
+### Changed
+- `problem-validation.tsx` — removed `WaitlistCount` (developers don't need waitlist numbers)
+- `app/layout.tsx` — updated metadata description (removed "Join the waitlist" language)
+- `app/about/page.tsx` — CTA now links to `/try` instead of `/#waitlist`, button text updated
+- `components/sections/footer.tsx` — added "For Recruiters" link in bottom bar
+- `CLAUDE.md` — waitlist section updated to reflect recruiter-only model
+
+### Removed
+- `/waitlist` page and all its components — developers go to `/try`, recruiters go to `/recruiters`
+
 ## [2026-03-08] — Branding + Component Restructure (PRD-005)
 
 ### Added

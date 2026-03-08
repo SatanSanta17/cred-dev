@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ExternalLink } from 'lucide-react'
-import { WaitlistCount } from '@/components/shared/waitlist-count'
 import Link from 'next/link'
 
 // ============================================================
@@ -154,35 +153,23 @@ export function ProblemValidation() {
           </div>
         )}
 
-        {/* Sample Report Link + Waitlist */}
+        {/* Sample Report Link */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mt-12 text-center space-y-4"
+          className="mt-12 text-center"
         >
-          <div>
-            <p className="text-gray-400 text-sm mb-3">See what a real report looks like</p>
-            <Link
-              href="/report/Burhanuddin"
-              target="_blank"
-              className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors font-medium"
-            >
-              <ExternalLink className="w-4 h-4" />
-              View Burhanuddin's CredDev Report
-            </Link>
-          </div>
-
-          <div className="pt-4">
-            <WaitlistCount
-              userType="developer"
-              showLabel={true}
-              className="text-sm text-gray-500"
-              hideUntil={10}
-              fallbackText=""
-            />
-          </div>
+          <p className="text-gray-400 text-sm mb-3">See what a real report looks like</p>
+          <Link
+            href="/report/Burhanuddin"
+            target="_blank"
+            className="inline-flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors font-medium"
+          >
+            <ExternalLink className="w-4 h-4" />
+            View Burhanuddin's CredDev Report
+          </Link>
         </motion.div>
       </div>
     </section>

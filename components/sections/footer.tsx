@@ -47,13 +47,21 @@ export function Footer() {
           <p className="text-gray-500 text-sm">
             &copy; {currentYear} <GradientText>CredDev</GradientText>. All rights reserved.
           </p>
-          <a
-            href="mailto:cred.dev17@gmail.com"
-            className="text-gray-500 hover:text-gray-300 transition-colors text-sm flex items-center gap-2"
-          >
-            <Mail className="w-4 h-4" />
-            cred.dev17@gmail.com
-          </a>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/recruiters"
+              className="text-gray-500 hover:text-cyan-400 transition-colors text-sm"
+            >
+              For Recruiters
+            </Link>
+            <a
+              href="mailto:cred.dev17@gmail.com"
+              className="text-gray-500 hover:text-gray-300 transition-colors text-sm flex items-center gap-2"
+            >
+              <Mail className="w-4 h-4" />
+              cred.dev17@gmail.com
+            </a>
+          </div>
         </div>
       </div>
     </footer>

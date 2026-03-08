@@ -104,7 +104,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 **Framework:** Next.js 16.1.6, React 19.2.3, TypeScript, Tailwind CSS 4
 **UI Library:** shadcn/ui (Radix primitives), Framer Motion, Lucide icons
 **Forms:** react-hook-form + zod validation
-**State:** Supabase client-side SDK (waitlist only), sonner toasts
+**State:** Supabase client-side SDK (recruiter waitlist), sonner toasts
 
 #### Page Routes
 
@@ -112,7 +112,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 |-------|------|---------|
 | `/` | `app/page.tsx` | Landing page — Hero, HowItWorks, ProblemValidation, Footer |
 | `/try` | `app/try/page.tsx` | Report generation flow — TryForm → extracting → generating → success/error |
-| `/waitlist` | `app/waitlist/page.tsx` | Standalone waitlist form |
+| `/recruiters` | `app/recruiters/page.tsx` | Recruiter-focused "coming soon" page — hero, product vision, quotes, waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
 | `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Honest sample report page — real data from actual CredDev report (VERIFIED/UNVERIFIED skills, LeetCode stats, production signals, risk flags). PDF download available. |
 | `/report/Pradeep` | `app/report/Pradeep/page.tsx` | Static sample report page |
@@ -125,8 +125,8 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, LinkedIn URL, resume (PDF, max 10MB). Zod validation requires at least one profile URL. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
-| `WaitlistForm` | `app/waitlist/_components/waitlist-form.tsx` | Inserts directly into Supabase `waitlist` table via client SDK. |
-| `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. |
+| `RecruiterWaitlistForm` | `app/recruiters/_components/recruiter-waitlist-form.tsx` | Recruiter-only waitlist form. Inserts into Supabase `waitlist` table with `user_type: 'recruiter'`. |
+| `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. Used on recruiter page only. |
 
 #### API Client (`lib/api.ts`)
 
@@ -325,10 +325,13 @@ cred-dev/
 │   │       ├── try-flow.tsx      # Core: form → extract → generate → result
 │   │       ├── try-form.tsx      # Input form with zod validation
 │   │       └── generation-loader.tsx # Animated progress display
-│   ├── waitlist/                 # /waitlist — standalone waitlist form
+│   ├── recruiters/               # /recruiters — "coming soon" recruiter page
 │   │   ├── page.tsx
 │   │   └── _components/          # Route-specific (co-located)
-│   │       └── waitlist-form.tsx # Supabase direct insert
+│   │       ├── recruiter-hero.tsx          # Recruiter-focused hero
+│   │       ├── product-vision.tsx          # What recruiters will get
+│   │       ├── recruiter-quotes.tsx        # Recruiter pain point quotes
+│   │       └── recruiter-waitlist-form.tsx # Recruiter-only waitlist
 │   ├── about/                    # /about — team + origin story
 │   │   ├── layout.tsx
 │   │   └── page.tsx
