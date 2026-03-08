@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -8,22 +8,62 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Github, Code2, Linkedin, User, Mail, Sparkles, FileText, X } from 'lucide-react'
+import { Loader2, Github, Code2, User, Mail, Sparkles, FileText, X, Plus, Link as LinkIcon } from 'lucide-react'
+
+// Domain-to-platform detection (mirrors backend platform_utils.py)
+const DOMAIN_MAP: Record<string, string> = {
+  'github.com': 'GitHub',
+  'leetcode.com': 'LeetCode',
+  'kaggle.com': 'Kaggle',
+  'huggingface.co': 'HuggingFace',
+  'codechef.com': 'CodeChef',
+  'codeforces.com': 'Codeforces',
+  'hackerrank.com': 'HackerRank',
+  'hackerearth.com': 'HackerEarth',
+  'linkedin.com': 'LinkedIn',
+  'stackoverflow.com': 'Stack Overflow',
+  'medium.com': 'Medium',
+  'dev.to': 'Dev.to',
+  'behance.net': 'Behance',
+  'dribbble.com': 'Dribbble',
+  'npmjs.com': 'npm',
+  'pypi.org': 'PyPI',
+  'storybook.js.org': 'Storybook',
+}
+
+function detectPlatformName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '')
+    for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
+      if (hostname === domain || hostname.endsWith(`.${domain}`)) return name
+    }
+    // Fallback: capitalize the domain name
+    const parts = hostname.split('.')
+    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
+  } catch {
+    return 'Profile'
+  }
+}
 
 const trySchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email'),
   github_url: z.string().url('Enter a valid GitHub URL').optional().or(z.literal('')),
   leetcode_url: z.string().url('Enter a valid LeetCode URL').optional().or(z.literal('')),
-  linkedin_url: z.string().url('Enter a valid LinkedIn URL').optional().or(z.literal('')),
-}).refine(
-  (data) => data.github_url || data.leetcode_url || data.linkedin_url,
-  { message: 'At least one profile URL is required', path: ['github_url'] }
-)
+})
 
 type FormFields = z.infer<typeof trySchema>
 
-export type TryFormData = FormFields & { resume?: File }
+interface AdditionalLink {
+  id: string
+  url: string
+  platformName: string
+}
+
+export type TryFormData = FormFields & {
+  resume?: File
+  additionalLinks: AdditionalLink[]
+}
 
 interface TryFormProps {
   onSubmit: (data: TryFormData) => void
@@ -32,12 +72,15 @@ interface TryFormProps {
 
 export function TryForm({ onSubmit, loading }: TryFormProps) {
   const [resumeFile, setResumeFile] = useState<File | null>(null)
+  const [additionalLinks, setAdditionalLinks] = useState<AdditionalLink[]>([])
+  const [linkError, setLinkError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<FormFields>({
     resolver: zodResolver(trySchema),
     defaultValues: {
@@ -45,9 +88,11 @@ export function TryForm({ onSubmit, loading }: TryFormProps) {
       email: '',
       github_url: '',
       leetcode_url: '',
-      linkedin_url: '',
     },
   })
+
+  const githubValue = watch('github_url')
+  const leetcodeValue = watch('leetcode_url')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -69,9 +114,57 @@ export function TryForm({ onSubmit, loading }: TryFormProps) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const addLink = useCallback(() => {
+    setAdditionalLinks((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), url: '', platformName: '' },
+    ])
+    setLinkError(null)
+  }, [])
+
+  const updateLink = useCallback((id: string, url: string) => {
+    setAdditionalLinks((prev) =>
+      prev.map((link) =>
+        link.id === id
+          ? { ...link, url, platformName: url.trim() ? detectPlatformName(url.trim()) : '' }
+          : link
+      )
+    )
+    setLinkError(null)
+  }, [])
+
+  const removeLink = useCallback((id: string) => {
+    setAdditionalLinks((prev) => prev.filter((link) => link.id !== id))
+    setLinkError(null)
+  }, [])
+
   const onFormSubmit = (data: FormFields) => {
-    onSubmit({ ...data, resume: resumeFile || undefined })
+    // Validate additional links have valid URLs
+    const filledLinks = additionalLinks.filter((l) => l.url.trim())
+    const invalidLink = filledLinks.find((l) => {
+      try {
+        new URL(l.url.trim())
+        return false
+      } catch {
+        return true
+      }
+    })
+    if (invalidLink) {
+      setLinkError('Please enter valid URLs for all additional links')
+      return
+    }
+
+    // Validate at least one input
+    const hasAnyUrl = data.github_url || data.leetcode_url || filledLinks.length > 0
+    if (!hasAnyUrl && !resumeFile) {
+      setLinkError('At least one profile URL or resume is required')
+      return
+    }
+
+    onSubmit({ ...data, resume: resumeFile || undefined, additionalLinks: filledLinks })
   }
+
+  const hasAnyInput = githubValue || leetcodeValue || additionalLinks.some((l) => l.url.trim()) || resumeFile
 
   return (
     <motion.div
@@ -144,7 +237,7 @@ export function TryForm({ onSubmit, loading }: TryFormProps) {
                 <div className="w-full border-t border-white/5" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-slate-900 px-3 text-gray-500">Profile Links (at least one)</span>
+                <span className="bg-slate-900 px-3 text-gray-500">Profile Links</span>
               </div>
             </div>
 
@@ -180,21 +273,59 @@ export function TryForm({ onSubmit, loading }: TryFormProps) {
               {errors.leetcode_url && <p className="text-red-400 text-xs mt-1">{errors.leetcode_url.message}</p>}
             </div>
 
-            {/* LinkedIn */}
-            <div>
-              <Label htmlFor="linkedin" className="text-sm text-gray-300 mb-1.5 flex items-center gap-2">
-                <Linkedin className="w-4 h-4 text-gray-500" />
-                LinkedIn URL
-              </Label>
-              <Input
-                id="linkedin"
-                placeholder="https://linkedin.com/in/username"
-                {...register('linkedin_url')}
-                className="h-12 bg-white/5 border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 placeholder:text-gray-600 transition-all"
-                disabled={loading}
-              />
-              {errors.linkedin_url && <p className="text-red-400 text-xs mt-1">{errors.linkedin_url.message}</p>}
-            </div>
+            {/* Additional Profile Links */}
+            {additionalLinks.map((link) => (
+              <motion.div
+                key={link.id}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <Label className="text-sm text-gray-300 mb-1.5 flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-gray-500" />
+                      {link.platformName || 'Profile URL'}
+                    </Label>
+                    <Input
+                      placeholder="https://kaggle.com/username"
+                      value={link.url}
+                      onChange={(e) => updateLink(link.id, e.target.value)}
+                      className="h-12 bg-white/5 border-white/10 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 placeholder:text-gray-600 transition-all"
+                      disabled={loading}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeLink(link.id)}
+                    disabled={loading}
+                    className="mt-7 p-2 rounded-md hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Add Profile Link button */}
+            <button
+              type="button"
+              onClick={addLink}
+              disabled={loading}
+              className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              Add Profile Link
+            </button>
+
+            {/* Link-level errors */}
+            {linkError && <p className="text-red-400 text-xs">{linkError}</p>}
+
+            {/* Validation hint */}
+            {!hasAnyInput && (
+              <p className="text-gray-500 text-xs">At least one profile URL or resume is required</p>
+            )}
 
             {/* Resume Upload */}
             <div className="relative py-2">

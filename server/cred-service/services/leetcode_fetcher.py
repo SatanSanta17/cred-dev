@@ -6,8 +6,11 @@ No transformation, no scoring, no intermediate processing.
 The LLM receives the raw data and does all the reasoning.
 """
 
+import logging
 import httpx
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 class LeetCodeFetcher:
@@ -26,9 +29,16 @@ class LeetCodeFetcher:
         }
 
     async def fetch_user_data(self, username: str) -> Dict[str, Any]:
+        logger.info(f"LeetCode fetch started for username={username}")
         try:
-            return await self._fetch(username)
+            result = await self._fetch(username)
+            if "error" in result:
+                logger.warning(f"LeetCode fetch returned error for username={username}: {result['error']}")
+            else:
+                logger.info(f"LeetCode fetch succeeded for username={username}")
+            return result
         except Exception as e:
+            logger.error(f"LeetCode fetch failed for username={username}: {e}", exc_info=True)
             return {"error": f"LeetCode fetch failed: {str(e)}", "data_source": "error_fallback"}
 
     async def _fetch(self, username: str) -> Dict[str, Any]:

@@ -1,6 +1,6 @@
 # CredDev Architecture
 
-> Last verified: 2026-03-03 — every file path, service, and dependency confirmed against actual code.
+> Last verified: 2026-03-08 — every file path, service, and dependency confirmed against actual code.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### What CredDev Does
 
-CredDev is a developer credibility verification platform. A candidate submits their GitHub, LeetCode, LinkedIn URLs and resume. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Reports are emailed as PDFs.
+CredDev is a developer credibility verification platform. A candidate submits their GitHub, LeetCode URLs, any additional profile links (Kaggle, CodeChef, Codeforces, LinkedIn, HuggingFace, etc.), and a resume. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Reports are emailed as PDFs.
 
 ### System Topology
 
@@ -42,16 +42,16 @@ CredDev is a developer credibility verification platform. A candidate submits th
 User submits form (/try)
        │
        ▼
-POST /api/v1/extract  (FormData: name, email, URLs, resume PDF)
+POST /api/v1/extract  (FormData: name, email, URLs, platform_urls JSON, resume PDF)
        │
        ├── Creates AnalysisJob (status: "pending")
        ├── Returns job_id immediately
        └── Background task: safe_extraction()
               │
               ├── Resume → PyPDF2 text extraction
-              ├── GitHub → GraphQL API (repos, PRs, contributions)
-              ├── LeetCode → GraphQL API (stats, submissions, contests)
-              └── LinkedIn → URL/username recorded (no scraping)
+              ├── GitHub → GitHubFetcher (GraphQL API)
+              ├── LeetCode → LeetCodeFetcher (GraphQL API)
+              └── Additional URLs → WebSearchFetcher (OpenAI web_search_preview per URL)
               │
               └── All raw data → raw_data table
                   Job status → "extracted"
@@ -122,7 +122,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | Component | File | Responsibility |
 |-----------|------|----------------|
 | `TryFlow` | `app/try/_components/try-flow.tsx` | Orchestrates the full form → extract → generate → success flow. State machine: `form` → `extracting` → `generating` → `success`/`error`. Manages polling with `MAX_POLLS=40` and `generationTriggered` guard flag. |
-| `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, LinkedIn URL, resume (PDF, max 10MB). Zod validation requires at least one profile URL. |
+| `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, dynamic "Add Profile Link" section for additional URLs (auto-detects platform from domain), resume (PDF, max 10MB). Requires at least one profile URL or resume. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
 | `RecruiterWaitlistForm` | `app/recruiters/_components/recruiter-waitlist-form.tsx` | Recruiter-only waitlist form. Inserts into Supabase `waitlist` table with `user_type: 'recruiter'`. |
@@ -161,7 +161,7 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 
 | Method | Path | Handler | Purpose |
 |--------|------|---------|---------|
-| POST | `/api/v1/extract` | `extract.extract_raw_data` | Accept form data + resume, start background extraction |
+| POST | `/api/v1/extract` | `extract.extract_raw_data` | Accept form data (platform_urls JSON + legacy URL params) + resume, start background extraction |
 | GET | `/api/v1/extract/{job_id}` | `extract.get_extraction_status` | Poll extraction status, returns raw data when done |
 | POST | `/api/v1/generate/{job_id}` | `generate.generate_reports` | Trigger LLM report generation |
 | GET | `/api/v1/generate/{job_id}` | `generate.get_generation_status` | Poll generation status, returns reports when done |
@@ -173,13 +173,14 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 
 | Service | File | What It Does |
 |---------|------|--------------|
-| `ExtractionService` | `services/extraction.py` | Orchestrates data fetching from all platforms. Each platform is independent — one failure doesn't block others. Marks job "extracted" when at least one source succeeds, "failed" only if ALL sources fail. |
+| `ExtractionService` | `services/extraction.py` | Orchestrates data fetching from all platforms. Accepts `platform_urls` dict. Routes GitHub/LeetCode to dedicated fetchers, all other URLs to WebSearchFetcher. Each platform is independent — one failure doesn't block others. Marks job "extracted" when at least one source succeeds, "failed" only if ALL sources fail. |
 | `GitHubFetcher` | `services/github_fetcher.py` | Two-query architecture: Query 1 fetches profile, 100 repos (lightweight), pinned repos, organizations, and language bytes. Query 2 fetches production readiness signals (README, Dockerfile, CI, tests, .env.example, dependency files) for the top 15 repos (by stars), batched in groups of 5 to stay within GitHub's query complexity limit. Returns raw merged response. Requires `GITHUB_TOKEN`. |
 | `LeetCodeFetcher` | `services/leetcode_fetcher.py` | Single GraphQL query to LeetCode's public API. Returns raw response — submission stats, tag problem counts, contest ranking, recent submissions (100), badges. Uses browser-like headers. |
-| `LinkedInFetcher` | `services/linkedin_fetcher.py` | Stub — records URL and extracted username only. LinkedIn blocks scraping (HTTP 999). Future: OAuth integration. |
+| `WebSearchFetcher` | `services/web_search_fetcher.py` | Generic profile data extractor for any URL. Calls OpenAI GPT-5-mini with `web_search_preview` tool to visit the URL and extract structured profile data (username, bio, stats, achievements, skills, projects). Returns parsed JSON or raw text on parse failure. Used for all platforms except GitHub and LeetCode. |
+| `platform_utils` | `services/platform_utils.py` | Domain-to-platform detection utility. Maps URL hostnames to platform IDs (e.g., kaggle.com → "kaggle"). Provides `detect_platform()`, `get_platform_name()`, and `is_dedicated_platform()`. |
 | `ResumeParser` | `services/resume_parser.py` | Extracts raw text from PDF using PyPDF2. No structured parsing — LLM does all reasoning from raw text. |
-| `RawDataLoader` | `services/raw_data_loader.py` | Reads raw_data table rows for a job, returns `{resume: {}, github: {}, leetcode: {}, linkedin: {}}` bundle. |
-| `ReportGenerator` | `services/report_generator.py` | Calls OpenAI GPT-5-mini (with web_search_preview tool) three times — one per report type. System message includes 7 immutable guardrails. Extensive report uses inline citations; developer and recruiter reports use natural prose with end-of-report disclaimers. Supports streaming via `_call_llm_streaming()` with progress callbacks — falls back to non-streaming on failure. |
+| `RawDataLoader` | `services/raw_data_loader.py` | Reads raw_data table rows for a job, returns dynamically-keyed dict based on whatever platforms were extracted (e.g., `{resume: {}, github: {}, leetcode: {}, kaggle: {}, ...}`). |
+| `ReportGenerator` | `services/report_generator.py` | Calls OpenAI GPT-5-mini (with web_search_preview tool) three times — one per report type. System message includes 7 immutable guardrails and dynamically lists the actual platforms submitted. Extensive report uses inline citations; developer and recruiter reports use natural prose with end-of-report disclaimers. Supports streaming via `_call_llm_streaming()` with progress callbacks — falls back to non-streaming on failure. |
 | `ReportStorageService` | `services/report_storage.py` | Stores 4 records per job: raw_signals (JSON), extensive_report, developer_insight, recruiter_insight (text). |
 | `ProgressManager` | `services/progress_manager.py` | In-memory singleton dict. Maps job_id → {stage, percentage, message, timestamp}. SSE endpoint reads from this every 1 second. Supports `extra` dict merge, `update_message()` for live message changes, and `increment_percentage()` for smooth progress within stage ranges. |
 | `get_email_service()` | `services/email_service.py` | Factory: Brevo (if `BREVO_API_KEY`) > Resend (if `RESEND_API_KEY`, deprecated) > SMTP (fallback). All three services share the same `send_reports(to_email, candidate_name, reports)` interface. |
@@ -207,12 +208,24 @@ async def safe_extraction():
 - SSE progress includes `email_failed: true` flag so the frontend can show a resend button
 - Users can retry email delivery via `POST /api/v1/generate/{job_id}/resend-email`
 
+#### Logging
+
+Centralized logging configured in `app/logging_config.py`, called on startup from `main.py`.
+
+| Setting | Production (`DEBUG=false`) | Development (`DEBUG=true`) |
+|---------|---------------------------|---------------------------|
+| Format | JSON (one object per line) | Human-readable with timestamps |
+| Level | `LOG_LEVEL` env var (default: INFO) | DEBUG |
+| Output | stdout (captured by Render) | stdout |
+
+Every `logger.error()` call includes `exc_info=True` for full stack traces. Pipeline logs use `job_id=` consistently so a single grep traces a full request lifecycle. Request logging middleware logs method, path, status code, and duration for every HTTP request (except `/health`).
+
 #### LLM Guardrails (system message — all 3 reports)
 
 1. **Verification Rule** — skill is VERIFIED only with explicit platform evidence
 2. **No Hallucination Rule** — missing data = "data not available", never assumptions
 3. **Date Awareness Rule** — today's date injected, experience calculated from resume dates
-4. **Cross-Platform Activity Rule** — must combine GitHub + LeetCode signals together
+4. **Cross-Platform Activity Rule** — must combine signals from ALL submitted platforms together
 5. **Company Source Rule** — work history from resume only, ignore GitHub company field
 6. **Claims vs Proof Rule** — resume bullets are claims, platform data is evidence
 7. **Output Format Rule** — no conversational sign-offs, document ends at final section
@@ -238,10 +251,11 @@ async def safe_extraction():
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
 | `error_message` | Text | Null unless failed |
+| `platform_urls` | JSON | All submitted URLs: `{"github": "...", "leetcode": "...", "kaggle": "...", ...}` |
 | `resume_url` | String | Currently unused (resume sent as bytes) |
-| `github_url` | String | |
-| `leetcode_url` | String | |
-| `linkedin_url` | String | |
+| `github_url` | String | Legacy — populated from platform_urls for backward compat |
+| `leetcode_url` | String | Legacy — populated from platform_urls for backward compat |
+| `linkedin_url` | String | Legacy — populated from platform_urls for backward compat |
 
 #### Table: `raw_data`
 
@@ -249,7 +263,7 @@ async def safe_extraction():
 |--------|------|-------|
 | `id` | Integer (PK) | Auto-increment |
 | `job_id` | String (FK → analysis_jobs.id) | |
-| `data_type` | String | "github", "leetcode", "resume", "linkedin" |
+| `data_type` | String | Any platform_id: "github", "leetcode", "resume", "kaggle", "linkedin", etc. |
 | `data` | JSON | Raw platform response |
 | `fetched_at` | DateTime | |
 
@@ -373,8 +387,9 @@ cred-dev/
 ├── server/cred-service/          # Python backend
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py               # FastAPI app, CORS, route registration, health check
+│   │   ├── main.py               # FastAPI app, CORS, logging setup, request middleware, health check
 │   │   ├── config.py             # Pydantic Settings — all env vars
+│   │   ├── logging_config.py     # Centralized logging — JSON (prod) / readable (dev)
 │   │   ├── database.py           # SQLAlchemy models: AnalysisJob, RawData, Report
 │   │   └── routes/
 │   │       ├── __init__.py
@@ -386,10 +401,11 @@ cred-dev/
 │   │   ├── extraction.py         # ExtractionService — orchestrates all fetchers
 │   │   ├── github_fetcher.py     # GitHub GraphQL — raw response
 │   │   ├── leetcode_fetcher.py   # LeetCode GraphQL — raw response
-│   │   ├── linkedin_fetcher.py   # LinkedIn URL stub
+│   │   ├── web_search_fetcher.py # Generic profile extractor via OpenAI web search
+│   │   ├── platform_utils.py     # Domain-to-platform detection utility
 │   │   ├── resume_parser.py      # PyPDF2 raw text extraction
-│   │   ├── raw_data_loader.py    # Loads raw_data from DB for a job
-│   │   ├── report_generator.py   # LLM calls — 3 reports, guardrails, prompts
+│   │   ├── raw_data_loader.py    # Loads raw_data from DB for a job (dynamic keys)
+│   │   ├── report_generator.py   # LLM calls — 3 reports, guardrails, dynamic platforms
 │   │   ├── report_storage.py     # Stores/retrieves reports in DB
 │   │   ├── progress_manager.py   # In-memory progress singleton for SSE
 │   │   └── email_service.py      # 3 email services + PDF generation + factory
@@ -410,7 +426,7 @@ cred-dev/
 
 ### Known Limitations and Technical Debt
 
-1. **LinkedIn integration is a stub** — only records URL. Needs OAuth API access for real data.
+1. **WebSearchFetcher depends on OpenAI web search** — quality varies by platform. Some profiles may return partial data if the page requires login.
 2. **Resume URL field unused** — `resume_url` column exists but resume is always sent as bytes in the request body. No Supabase Storage integration yet.
 3. **ProgressManager is in-memory** — lost on server restart. Works fine for single-instance Render but won't scale to multiple workers.
 4. **No authentication** — anyone can submit. `user_id` column exists but isn't populated.

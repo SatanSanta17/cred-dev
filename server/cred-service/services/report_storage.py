@@ -58,7 +58,7 @@ class ReportStorageService:
             db.commit()
 
         except Exception as e:
-            logger.error(f"Failed to save reports for {job_id}: {e}")
+            logger.error(f"Failed to save reports for job_id={job_id}: {e}", exc_info=True)
             db.rollback()
             raise
 

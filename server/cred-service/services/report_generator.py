@@ -27,14 +27,16 @@ logger = logging.getLogger(__name__)
 # These are immutable rules the LLM must follow regardless of report type.
 # =========================================
 
-GUARDRAILS_BASE = """You are a developer credibility verification engine. You receive raw data from GitHub (GraphQL), LeetCode (GraphQL), and a resume text. Your job is to reason over this data and produce reports.
+GUARDRAILS_BASE = """You are a developer credibility verification engine. You receive raw data from multiple platforms and sources. Your job is to reason over this data and produce reports.
+
+DATA SOURCES FOR THIS CANDIDATE: {platforms}
 
 IMMUTABLE RULES — violating any of these is a critical failure:
 
 1. VERIFICATION RULE
-   A skill is VERIFIED only if you can point to explicit evidence in the raw data.
-   - For languages: must appear in GitHub repo language nodes OR LeetCode submission lang fields
-   - For frameworks/libraries (React, Node, MongoDB, etc.): must appear in repo descriptions, repo names, or repositoryTopics in the raw GitHub data
+   A skill is VERIFIED only if you can point to explicit evidence in the raw data from any platform.
+   - For languages: must appear in GitHub repo language nodes, LeetCode submission lang fields, or other platform data
+   - For frameworks/libraries: must appear in repo descriptions, repo names, repositoryTopics, or other platform project data
    - If you cannot find explicit evidence, mark it UNVERIFIED — do not guess or infer
    - Resume text mentioning a skill is a CLAIM, not verification
 
@@ -50,8 +52,8 @@ IMMUTABLE RULES — violating any of these is a critical failure:
 
 4. CROSS-PLATFORM ACTIVITY RULE
    Never assess a candidate's activity or consistency using only one platform.
-   Always combine signals: GitHub commits + LeetCode submissions together.
-   A developer may be inactive on LeetCode but actively pushing to GitHub — that is NOT low activity.
+   Combine signals from ALL available platforms together.
+   A developer may be inactive on one platform but actively contributing on another — that is NOT low activity.
 
 5. COMPANY SOURCE RULE
    Professional work history comes from the RESUME TEXT only.
@@ -100,9 +102,21 @@ class ReportGenerator:
             raise ValueError("OPENAI_API_KEY not configured. Set it in cred-service/.env")
         self.client = OpenAI(api_key=api_key)
 
-    def _build_system_message(self, report_type: str = "extensive") -> str:
+    def _build_system_message(self, report_type: str = "extensive", raw_data: Dict = None) -> str:
         """Build system message with guardrails + citation mode for the report type."""
-        base = GUARDRAILS_BASE.format(today=date.today().isoformat())
+        # Dynamically list platforms that have data for this candidate
+        platforms_list = []
+        if raw_data:
+            from services.platform_utils import get_platform_name
+            for key in raw_data:
+                if raw_data[key] and not (isinstance(raw_data[key], dict) and raw_data[key].get("error")):
+                    platforms_list.append(get_platform_name(key))
+        platforms_str = ", ".join(platforms_list) if platforms_list else "GitHub, LeetCode, Resume"
+
+        base = GUARDRAILS_BASE.format(
+            today=date.today().isoformat(),
+            platforms=platforms_str,
+        )
         if report_type == "extensive":
             return base + CITATION_EXTENSIVE
         else:
@@ -115,31 +129,41 @@ class ReportGenerator:
     def _build_llm_context(self, raw_data: Dict) -> str:
         """
         Passes raw platform data directly to the LLM with no transformation.
-        GitHub and LeetCode: raw GraphQL response JSON.
-        Resume: raw extracted text.
+        Dynamically includes all platforms that have data for this job.
         """
+        from services.platform_utils import get_platform_name
         sections = []
 
-        github = raw_data.get("github", {})
-        if github and not github.get("error"):
-            sections.append(
-                "=== GITHUB RAW DATA (GraphQL Response) ===\n"
-                + json.dumps(github.get("data", {}), indent=2)
-            )
+        for platform_id, data in raw_data.items():
+            if not data or (isinstance(data, dict) and data.get("error")):
+                continue
 
-        leetcode = raw_data.get("leetcode", {})
-        if leetcode and not leetcode.get("error"):
-            sections.append(
-                "=== LEETCODE RAW DATA (GraphQL Response) ===\n"
-                + json.dumps(leetcode.get("data", {}), indent=2)
-            )
+            platform_name = get_platform_name(platform_id)
 
-        resume = raw_data.get("resume", {})
-        if resume and not resume.get("error"):
-            sections.append(
-                "=== RESUME TEXT ===\n"
-                + (resume.get("raw_text") or "")
-            )
+            # Resume: use raw text if available
+            if platform_id == "resume":
+                raw_text = data.get("raw_text", "")
+                if raw_text:
+                    sections.append(f"=== {platform_name.upper()} TEXT ===\n{raw_text}")
+                continue
+
+            # GitHub/LeetCode: use nested "data" key if present (GraphQL response shape)
+            if platform_id in ("github", "leetcode") and "data" in data:
+                sections.append(
+                    f"=== {platform_name.upper()} RAW DATA (GraphQL Response) ===\n"
+                    + json.dumps(data["data"], indent=2)
+                )
+                continue
+
+            # Web search results or other platforms: prefer raw_text, fall back to JSON dump
+            raw_text = data.get("raw_text", "")
+            if raw_text:
+                sections.append(f"=== {platform_name.upper()} PROFILE DATA ===\n{raw_text}")
+            else:
+                sections.append(
+                    f"=== {platform_name.upper()} PROFILE DATA ===\n"
+                    + json.dumps(data, indent=2)
+                )
 
         return "\n\n".join(sections)
 
@@ -258,7 +282,7 @@ what kind of role and team should this developer be targeting and why?
 ### Verification Disclaimer
 End the report with this section. Write it as follows:
 
-**Data Sources:** GitHub (repositories, contributions, pull requests, languages, topics) and LeetCode (problem stats, topic strengths, submission languages, contest history).
+**Data Sources:** List all platforms that provided data for this candidate (e.g. GitHub, LeetCode, Kaggle, CodeChef, etc.) and what type of data each contributed.
 
 **Unverified Claims** (present in resume, no platform evidence found): List each skill or claim that could not be confirmed. Be specific — name the skill and why it couldn't be verified.
 
@@ -319,7 +343,7 @@ Based on verified tech stack and company history:
 ### Verification Disclaimer
 End the report with this section:
 
-**Data Sources:** GitHub (repositories, contributions, pull requests, languages, topics) and LeetCode (problem stats, topic strengths, submission languages, contest history).
+**Data Sources:** List all platforms that provided data for this candidate (e.g. GitHub, LeetCode, Kaggle, CodeChef, etc.) and what type of data each contributed.
 
 **Unverified Claims** (present in resume, no platform evidence found): List each unverified skill or claim specifically — name it and state that no platform evidence was found.
 

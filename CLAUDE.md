@@ -33,6 +33,7 @@ Additional practices:
 - **Naming reflects purpose.** File names, component names, and function names describe what they do — not how they're implemented.
 - **Composition over inheritance.** Build complex components by composing simple ones. Use props and children, not deep class hierarchies.
 - **Fail explicitly.** Errors are caught, logged, and surfaced to the user — never silently swallowed unless explicitly documented in the architecture.
+- **Log everything that matters.** Every service method must log: entry with input context, exit with outcome, and errors with `exc_info=True`. Use `job_id=` in all pipeline logs so a single grep traces the full lifecycle. No silent failures — if you catch an exception, you log it before handling it. New features must ship with logging from day one.
 
 ## After Making Changes
 

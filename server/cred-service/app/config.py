@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # App settings
     debug: bool = False
+    log_level: str = "INFO"
     cors_origins: list = ["http://localhost:3000", "https://cred-dev17.vercel.app"]
 
     class Config:
