@@ -1,9 +1,7 @@
 'use client'
 
-import { TryFlow } from '@/components/sections/try-flow'
-import { GradientText } from '@/components/shared/gradient-text'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { TryFlow } from './_components/try-flow'
+import { BackLink } from '@/components/shared/back-link'
 
 export default function TryPage() {
   return (
@@ -18,12 +16,7 @@ export default function TryPage() {
 
       {/* Top Nav */}
       <nav className="relative z-20 flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
-        <Link href="/" className="flex items-center gap-2 group">
-          <ArrowLeft className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
-          <span className="text-xl font-bold">
-            <GradientText>CredDev</GradientText>
-          </span>
-        </Link>
+        <BackLink showBrand />
       </nav>
 
       {/* Main Content */}

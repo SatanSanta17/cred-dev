@@ -263,12 +263,12 @@ export default function AboutPage() {
             <p className="text-xl text-gray-400 mb-8">
               Be part of the future of developer verification
             </p>
-            <Link href="/#waitlist">
+            <Link href="/try">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
               >
-                Join the Waitlist
+                Generate Your Free Report
               </Button>
             </Link>
           </motion.div>

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CredDev - The Credibility Layer for Developers",
-  description: "Verify skills. Build trust. Get discovered. Join the waitlist for early access.",
+  description: "Verify skills. Build trust. Get discovered. AI-powered credibility reports for developers.",
   keywords: ["developer", "credibility", "skills", "github", "leetcode", "hiring"],
   authors: [{ name: "CredDev Team" }],
   openGraph: {
