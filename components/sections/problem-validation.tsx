@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '@/components/ui/card'
+import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { QuotesCarousel } from '@/components/shared/quotes-carousel'
+import type { Quote } from '@/components/shared/quote-card'
 
 // ============================================================
 // QUOTES ARRAY — Edit this to add/replace quotes.
-// If more than 3 quotes exist, the component auto-rotates.
+// Mobile always auto-rotates (1 visible). Desktop auto-rotates if > 3.
 // ============================================================
-const QUOTES = [
+const QUOTES: Quote[] = [
   {
     text: 'I spend more time verifying candidates than actually interviewing them. There has to be a better way.',
     role: 'Tech Recruiter, Series B startup',
@@ -24,47 +24,10 @@ const QUOTES = [
     text: 'We rejected a great candidate because their resume looked weak. Turns out their open source work was incredible.',
     role: 'Hiring Manager',
   },
-  // Add more quotes here — the component auto-rotates if > 3
+  // Add more quotes here — desktop auto-rotates if > 3, mobile always rotates
 ]
 
-const ROTATION_INTERVAL = 5000 // 5 seconds
-const DESKTOP_VISIBLE = 3
-const MOBILE_VISIBLE = 1
-
 export function ProblemValidation() {
-  const shouldRotate = QUOTES.length > DESKTOP_VISIBLE
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-
-  // Auto-rotate logic
-  useEffect(() => {
-    if (!shouldRotate || isPaused) return
-
-    const timer = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % QUOTES.length)
-    }, ROTATION_INTERVAL)
-
-    return () => clearInterval(timer)
-  }, [shouldRotate, isPaused])
-
-  // Get visible quotes for desktop (3 at a time, wrapping)
-  const getDesktopQuotes = useCallback(() => {
-    if (!shouldRotate) return QUOTES.slice(0, DESKTOP_VISIBLE)
-    const result = []
-    for (let i = 0; i < DESKTOP_VISIBLE; i++) {
-      result.push(QUOTES[(activeIndex + i) % QUOTES.length])
-    }
-    return result
-  }, [activeIndex, shouldRotate])
-
-  // Get visible quote for mobile (1 at a time)
-  const getMobileQuote = useCallback(() => {
-    return QUOTES[activeIndex % QUOTES.length]
-  }, [activeIndex])
-
-  // Dot indicators for navigation
-  const totalDots = shouldRotate ? QUOTES.length : Math.min(QUOTES.length, DESKTOP_VISIBLE)
-
   return (
     <section className="py-16 sm:py-20 px-6 bg-black relative overflow-hidden">
       {/* Background decoration */}
@@ -94,64 +57,7 @@ export function ProblemValidation() {
           </p>
         </motion.div>
 
-        {/* Desktop Quotes (3 visible) */}
-        <div
-          className="hidden md:block"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="grid grid-cols-3 gap-6"
-            >
-              {getDesktopQuotes().map((quote, i) => (
-                <QuoteCard key={`${activeIndex}-${i}`} quote={quote} delay={i * 0.1} />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Mobile Quote (1 visible) */}
-        <div
-          className="md:hidden"
-          onTouchStart={() => setIsPaused(true)}
-          onTouchEnd={() => setTimeout(() => setIsPaused(false), 2000)}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <QuoteCard quote={getMobileQuote()} delay={0} />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Dot indicators (only if rotating) */}
-        {shouldRotate && (
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: totalDots }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveIndex(i)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  i === activeIndex % QUOTES.length
-                    ? 'bg-purple-400 w-4'
-                    : 'bg-slate-700 hover:bg-slate-600'
-                }`}
-                aria-label={`Go to quote ${i + 1}`}
-              />
-            ))}
-          </div>
-        )}
+        <QuotesCarousel quotes={QUOTES} dotColor="bg-purple-400" />
 
         {/* Sample Report Link */}
         <motion.div
@@ -173,27 +79,5 @@ export function ProblemValidation() {
         </motion.div>
       </div>
     </section>
-  )
-}
-
-// ============================================================
-// QuoteCard — individual quote display
-// ============================================================
-function QuoteCard({ quote, delay }: { quote: { text: string; role: string }; delay: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-    >
-      <Card className="p-6 h-full bg-slate-900/50 border-slate-800 hover:border-slate-700 transition-all">
-        <p className="text-gray-300 leading-relaxed mb-4 text-sm sm:text-base italic">
-          &ldquo;{quote.text}&rdquo;
-        </p>
-        <p className="text-xs text-gray-500">
-          — {quote.role}
-        </p>
-      </Card>
-    </motion.div>
   )
 }

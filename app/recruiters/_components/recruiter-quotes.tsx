@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '@/components/ui/card'
+import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
+import { QuotesCarousel } from '@/components/shared/quotes-carousel'
+import type { Quote } from '@/components/shared/quote-card'
 
 // Placeholder quotes — replace with real recruiter/HR conversations
-const QUOTES = [
+const QUOTES: Quote[] = [
   {
     text: 'I spend more time verifying candidates than actually interviewing them. Half the resumes I see have inflated skills.',
     role: 'Tech Recruiter, Series B Startup',
@@ -21,56 +21,7 @@ const QUOTES = [
   },
 ]
 
-const ROTATION_INTERVAL = 5000
-const DESKTOP_VISIBLE = 3
-const MOBILE_VISIBLE = 1
-
-function QuoteCard({ quote, delay = 0 }: { quote: typeof QUOTES[0]; delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-    >
-      <Card className="p-6 bg-slate-900/60 border-slate-800 h-full">
-        <p className="text-gray-300 italic leading-relaxed mb-4">
-          &ldquo;{quote.text}&rdquo;
-        </p>
-        <p className="text-sm text-gray-500 font-mono">
-          — {quote.role}
-        </p>
-      </Card>
-    </motion.div>
-  )
-}
-
 export function RecruiterQuotes() {
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-
-  const shouldRotate = QUOTES.length > DESKTOP_VISIBLE
-
-  const advance = useCallback(() => {
-    setActiveIndex((prev) => (prev + 1) % QUOTES.length)
-  }, [])
-
-  useEffect(() => {
-    if (!shouldRotate || isPaused) return
-    const timer = setInterval(advance, ROTATION_INTERVAL)
-    return () => clearInterval(timer)
-  }, [shouldRotate, isPaused, advance])
-
-  const getDesktopQuotes = () => {
-    const result = []
-    for (let i = 0; i < DESKTOP_VISIBLE; i++) {
-      result.push(QUOTES[(activeIndex + i) % QUOTES.length])
-    }
-    return result
-  }
-
-  const mobileQuote = QUOTES[activeIndex % QUOTES.length]
-  const totalDots = Math.min(QUOTES.length, shouldRotate ? QUOTES.length : 0)
-
   return (
     <section className="py-16 sm:py-20 px-6 bg-black">
       <div className="container mx-auto max-w-4xl">
@@ -93,64 +44,7 @@ export function RecruiterQuotes() {
           </p>
         </motion.div>
 
-        {/* Desktop Quotes */}
-        <div
-          className="hidden md:block"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="grid grid-cols-3 gap-6"
-            >
-              {getDesktopQuotes().map((quote, i) => (
-                <QuoteCard key={`${activeIndex}-${i}`} quote={quote} delay={i * 0.1} />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Mobile Quote */}
-        <div
-          className="md:hidden"
-          onTouchStart={() => setIsPaused(true)}
-          onTouchEnd={() => setTimeout(() => setIsPaused(false), 2000)}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <QuoteCard quote={mobileQuote} />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Dot Indicators */}
-        {shouldRotate && (
-          <div className="flex justify-center gap-2 mt-6">
-            {Array.from({ length: totalDots }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveIndex(i)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  i === activeIndex % QUOTES.length
-                    ? 'bg-cyan-400 w-4'
-                    : 'bg-slate-700 hover:bg-slate-600'
-                }`}
-                aria-label={`Go to quote ${i + 1}`}
-              />
-            ))}
-          </div>
-        )}
+        <QuotesCarousel quotes={QUOTES} dotColor="bg-cyan-400" />
       </div>
     </section>
   )

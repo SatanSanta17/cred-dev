@@ -348,6 +348,8 @@ cred-dev/
 │   │   ├── back-link.tsx         # Back navigation (used on /try, /report)
 │   │   ├── brand.tsx             # CredDev logo icon + gradient name
 │   │   ├── gradient-text.tsx
+│   │   ├── quote-card.tsx        # Single quote card (used by QuotesCarousel)
+│   │   ├── quotes-carousel.tsx   # Rotating quote carousel — desktop 3-col, mobile 1-card
 │   │   └── waitlist-count.tsx    # Real-time waitlist counter
 │   └── ui/                       # shadcn/ui primitives
 │       ├── badge.tsx
