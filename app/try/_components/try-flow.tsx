@@ -54,13 +54,20 @@ export function TryFlow() {
     setFormLoading(true)
 
     try {
+      // Build platform_urls from additional links
+      const platformUrls: Record<string, string> = {}
+      for (const link of data.additionalLinks) {
+        const key = link.platformName.toLowerCase().replace(/\s+/g, '_') || 'other'
+        platformUrls[key] = link.url
+      }
+
       // Phase 1: Submit extraction
       const extractRes = await submitExtraction({
         candidate_name: data.name,
         candidate_email: data.email,
         github_url: data.github_url || undefined,
         leetcode_url: data.leetcode_url || undefined,
-        linkedin_url: data.linkedin_url || undefined,
+        platform_urls: Object.keys(platformUrls).length > 0 ? platformUrls : undefined,
         resume: data.resume,
       })
 
@@ -94,6 +101,9 @@ export function TryFlow() {
             const status = await getExtractionStatus(extractRes.job_id)
 
             if (status.status === 'extracted') {
+              // Double-check: another in-flight callback may have triggered generation
+              // while this one was awaiting getExtractionStatus
+              if (generationTriggered) return
               generationTriggered = true
               cleanup()
 
@@ -103,8 +113,13 @@ export function TryFlow() {
                 setState('generating') // SSE hook takes over from here
               } catch (genErr: unknown) {
                 const msg = genErr instanceof Error ? genErr.message : 'Generation trigger failed'
-                setErrorMessage(msg)
-                setState('error')
+                // If generation was already started (409), transition to generating state
+                if (msg.includes('already in progress') || msg.includes('already been generated')) {
+                  setState('generating')
+                } else {
+                  setErrorMessage(msg)
+                  setState('error')
+                }
               }
             } else if (status.status === 'failed') {
               cleanup()
@@ -193,7 +208,7 @@ export function TryFlow() {
                 </motion.div>
                 <h3 className="text-xl font-semibold text-white mb-2">Connecting to Platforms</h3>
                 <p className="text-gray-400 text-sm">
-                  Fetching data from GitHub, LeetCode, and LinkedIn...
+                  Fetching data from your submitted profiles...
                 </p>
                 <p className="text-gray-600 text-xs mt-4">This usually takes 10-30 seconds</p>
               </div>

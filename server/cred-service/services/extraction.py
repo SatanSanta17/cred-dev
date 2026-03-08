@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Dict, Optional
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, RawData, AnalysisJob
 from app.config import settings
@@ -7,14 +8,19 @@ from app.config import settings
 from services.resume_parser import ResumeParser
 from services.github_fetcher import GitHubFetcher
 from services.leetcode_fetcher import LeetCodeFetcher
-from services.linkedin_fetcher import LinkedInFetcher
+from services.web_search_fetcher import WebSearchFetcher
+from services.platform_utils import is_dedicated_platform
 
 logger = logging.getLogger(__name__)
 
 
 class ExtractionService:
     """
-    Handles raw signal acquisition only.
+    Handles raw signal acquisition from all platforms.
+
+    Dedicated extractors: GitHub (GraphQL), LeetCode (GraphQL), Resume (PyPDF2).
+    All other URLs: WebSearchFetcher (OpenAI web_search_preview).
+
     Each platform extraction is independent — one failure doesn't block others.
     """
 
@@ -22,22 +28,35 @@ class ExtractionService:
         self.resume_parser = ResumeParser()
         self.github_fetcher = GitHubFetcher(token=settings.github_token)
         self.leetcode_fetcher = LeetCodeFetcher()
-        self.linkedin_fetcher = LinkedInFetcher()
+        self.web_search_fetcher = WebSearchFetcher()
 
     async def run_extraction(
         self,
         job_id: str,
+        platform_urls: Dict[str, str] = None,
         resume_bytes: bytes = None,
         resume_filename: str = None,
+        candidate_name: str = None,
+        # Legacy params — converted to platform_urls internally
         github_url: str = None,
         leetcode_url: str = None,
         linkedin_url: str = None,
-        candidate_name: str = None,
     ):
         db: Session = SessionLocal()
         errors = []
 
+        # Merge legacy params into platform_urls
+        if platform_urls is None:
+            platform_urls = {}
+        if github_url and "github" not in platform_urls:
+            platform_urls["github"] = github_url
+        if leetcode_url and "leetcode" not in platform_urls:
+            platform_urls["leetcode"] = leetcode_url
+        if linkedin_url and "linkedin" not in platform_urls:
+            platform_urls["linkedin"] = linkedin_url
+
         try:
+            logger.info(f"Extraction started for job_id={job_id} — platforms={list(platform_urls.keys())}, resume={'yes' if resume_bytes else 'no'}")
             self._update_job_status(db, job_id, "extracting")
 
             # ---------------------------
@@ -48,16 +67,17 @@ class ExtractionService:
                     resume_data = self.resume_parser.parse_resume_bytes(resume_bytes, resume_filename)
                     self._store_raw(db, job_id, "resume", resume_data)
                 except Exception as e:
-                    logger.error(f"Resume extraction failed for {job_id}: {e}")
+                    logger.error(f"Resume extraction failed for job_id={job_id}: {e}", exc_info=True)
                     errors.append(f"resume: {str(e)}")
                     self._store_raw(db, job_id, "resume", {"error": str(e)})
 
             # ---------------------------
-            # GITHUB EXTRACTION
+            # GITHUB EXTRACTION (dedicated)
             # ---------------------------
-            if github_url:
+            github_url_val = platform_urls.pop("github", None)
+            if github_url_val:
                 try:
-                    username = self._extract_github_username(github_url)
+                    username = self._extract_github_username(github_url_val)
                     if username:
                         github_data = await self.github_fetcher.fetch_user_data(username)
                         self._store_raw(db, job_id, "github", github_data)
@@ -65,16 +85,17 @@ class ExtractionService:
                         errors.append("github: could not extract username from URL")
                         self._store_raw(db, job_id, "github", {"error": "invalid URL", "profile": {}, "repository_intelligence": {"total_repositories": 0, "top_repositories": [], "all_repositories": []}})
                 except Exception as e:
-                    logger.error(f"GitHub extraction failed for {job_id}: {e}")
+                    logger.error(f"GitHub extraction failed for job_id={job_id}: {e}", exc_info=True)
                     errors.append(f"github: {str(e)}")
                     self._store_raw(db, job_id, "github", {"error": str(e), "profile": {}, "repository_intelligence": {"total_repositories": 0, "top_repositories": [], "all_repositories": []}})
 
             # ---------------------------
-            # LEETCODE EXTRACTION
+            # LEETCODE EXTRACTION (dedicated)
             # ---------------------------
-            if leetcode_url:
+            leetcode_url_val = platform_urls.pop("leetcode", None)
+            if leetcode_url_val:
                 try:
-                    username = self._extract_leetcode_username(leetcode_url)
+                    username = self._extract_leetcode_username(leetcode_url_val)
                     if username:
                         leetcode_data = await self.leetcode_fetcher.fetch_user_data(username)
                         self._store_raw(db, job_id, "leetcode", leetcode_data)
@@ -82,38 +103,40 @@ class ExtractionService:
                         errors.append("leetcode: could not extract username from URL")
                         self._store_raw(db, job_id, "leetcode", {"error": "invalid URL", "problem_solving_stats": {"total_solved": 0}})
                 except Exception as e:
-                    logger.error(f"LeetCode extraction failed for {job_id}: {e}")
+                    logger.error(f"LeetCode extraction failed for job_id={job_id}: {e}", exc_info=True)
                     errors.append(f"leetcode: {str(e)}")
                     self._store_raw(db, job_id, "leetcode", {"error": str(e), "problem_solving_stats": {"total_solved": 0}})
 
             # ---------------------------
-            # LINKEDIN EXTRACTION (OPTIONAL)
+            # ALL OTHER PLATFORMS (web search)
             # ---------------------------
-            if linkedin_url:
+            for platform_id, url in platform_urls.items():
+                if not url:
+                    continue
                 try:
-                    linkedin_data = await self.linkedin_fetcher.fetch_user_data(linkedin_url)
-                    self._store_raw(db, job_id, "linkedin", linkedin_data)
+                    logger.info(f"Web search extraction for {platform_id}: {url} job_id={job_id}")
+                    data = await self.web_search_fetcher.fetch_profile(url, platform_id)
+                    self._store_raw(db, job_id, platform_id, data)
                 except Exception as e:
-                    logger.error(f"LinkedIn extraction failed for {job_id}: {e}")
-                    errors.append(f"linkedin: {str(e)}")
-                    self._store_raw(db, job_id, "linkedin", {"error": str(e)})
+                    logger.error(f"{platform_id} extraction failed for job_id={job_id}: {e}", exc_info=True)
+                    errors.append(f"{platform_id}: {str(e)}")
+                    self._store_raw(db, job_id, platform_id, {"error": str(e), "url": url})
 
             # ---------------------------
             # DONE — mark as extracted even if some platforms had errors
             # ---------------------------
-            # Pseudocode for desired logic:
-            total_sources_requested = sum([bool(resume_bytes), bool(github_url), bool(leetcode_url), bool(linkedin_url)])
-            successful_extractions = total_sources_requested - len(errors)
+            total_sources = sum([bool(resume_bytes)]) + len(platform_urls) + (1 if github_url_val else 0) + (1 if leetcode_url_val else 0)
+            successful_extractions = total_sources - len(errors)
 
-            if successful_extractions == 0 and total_sources_requested > 0:
-                # All sources failed - fail the entire extraction
+            if successful_extractions == 0 and total_sources > 0:
+                logger.warning(f"All extractions failed for job_id={job_id} — errors: {errors}")
                 self._update_job_status(db, job_id, "failed", "All requested data sources failed to extract")
             else:
-                # Some sources succeeded or none were requested
                 error_msg = "; ".join(errors) if errors else None
+                logger.info(f"Extraction completed for job_id={job_id} — {successful_extractions}/{total_sources} sources succeeded" + (f", partial errors: {errors}" if errors else ""))
                 self._update_job_status(db, job_id, "extracted", error_msg)
         except Exception as e:
-            logger.error(f"Extraction completely failed for {job_id}: {e}")
+            logger.error(f"Extraction completely failed for job_id={job_id}: {e}", exc_info=True)
             self._update_job_status(db, job_id, "failed", str(e))
 
         finally:

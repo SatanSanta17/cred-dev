@@ -410,7 +410,7 @@ class SMTPEmailService:
             )
 
         except Exception as e:
-            logger.error(f"[EMAIL] SMTP failed to send to {to_email}: {e}")
+            logger.error(f"[EMAIL] SMTP failed to send to {to_email}: {e}", exc_info=True)
             raise
 
 
@@ -476,7 +476,7 @@ class ResendEmailService:
             )
 
         except Exception as e:
-            logger.error(f"[EMAIL] Resend failed to send to {to_email}: {e}")
+            logger.error(f"[EMAIL] Resend failed to send to {to_email}: {e}", exc_info=True)
             raise
 
 
@@ -557,7 +557,7 @@ class BrevoEmailService:
             )
 
         except Exception as e:
-            logger.error(f"[EMAIL] Brevo failed to send to {to_email}: {e}")
+            logger.error(f"[EMAIL] Brevo failed to send to {to_email}: {e}", exc_info=True)
             raise
 
 
@@ -585,7 +585,7 @@ def _generate_pdf_attachments(candidate_name: str, reports: Dict[str, str]):
             report_names.append(title)
             logger.info(f"[EMAIL] Generated PDF: {filename} ({len(pdf_bytes)} bytes)")
         except Exception as e:
-            logger.error(f"[EMAIL] Failed to generate PDF for {report_key}: {e}")
+            logger.error(f"[EMAIL] Failed to generate PDF for {report_key}: {e}", exc_info=True)
             continue
 
     if not attachments:

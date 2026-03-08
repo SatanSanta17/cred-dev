@@ -3,8 +3,11 @@ In-memory progress tracking for report generation jobs.
 SSE endpoint reads from this to stream updates to the frontend.
 """
 
+import logging
 from typing import Dict, Optional
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 STAGES = {
     "loading_data":          {"pct": 5,   "msg": "Loading extracted platform data..."},
@@ -33,6 +36,7 @@ class ProgressManager:
         }
 
     def update(self, job_id: str, stage: str, extra: dict = None):
+        logger.debug(f"Progress update job_id={job_id} stage={stage}" + (f" extra={extra}" if extra else ""))
         info = STAGES.get(stage, {"pct": 0, "msg": stage})
         entry = {
             "stage": stage,

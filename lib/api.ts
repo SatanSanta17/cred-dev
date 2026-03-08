@@ -28,15 +28,19 @@ export async function submitExtraction(formData: {
   candidate_email: string
   github_url?: string
   leetcode_url?: string
-  linkedin_url?: string
+  platform_urls?: Record<string, string>
   resume?: File
 }): Promise<ExtractionResponse> {
   const body = new FormData()
   body.append('candidate_name', formData.candidate_name)
   body.append('candidate_email', formData.candidate_email)
+  // Dedicated platform fields (backward compat)
   if (formData.github_url) body.append('github_url', formData.github_url)
   if (formData.leetcode_url) body.append('leetcode_url', formData.leetcode_url)
-  if (formData.linkedin_url) body.append('linkedin_url', formData.linkedin_url)
+  // New: all platform URLs as JSON string
+  if (formData.platform_urls && Object.keys(formData.platform_urls).length > 0) {
+    body.append('platform_urls', JSON.stringify(formData.platform_urls))
+  }
   if (formData.resume) body.append('resume', formData.resume)
 
   const res = await fetch(`${API_BASE}/api/v1/extract`, {

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, B
 from sqlalchemy.orm import Session
 from typing import Optional
 import uuid
+import json
 import logging
 from datetime import datetime
 from ..database import get_db, AnalysisJob, SessionLocal
@@ -17,6 +18,9 @@ router = APIRouter()
 async def extract_raw_data(
     background_tasks: BackgroundTasks,
     resume: Optional[UploadFile] = File(None),
+    # New: flexible platform URLs as JSON string
+    platform_urls: Optional[str] = Form(None),
+    # Legacy params — still accepted for backward compat
     github_url: Optional[str] = Form(None),
     leetcode_url: Optional[str] = Form(None),
     linkedin_url: Optional[str] = Form(None),
@@ -26,15 +30,38 @@ async def extract_raw_data(
     db: Session = Depends(get_db)
 ):
     """
-    Extract raw data from resume, github, leetcode, and linkedin.
-    Triggers background extraction pipeline.
+    Extract raw data from submitted platforms.
+
+    Accepts platform URLs in two formats:
+    - NEW: platform_urls (JSON string) — {"github": "url", "kaggle": "url", ...}
+    - LEGACY: github_url, leetcode_url, linkedin_url (individual Form params)
+
+    If both are provided, platform_urls takes priority; legacy params fill gaps.
     """
 
-    # Validate inputs
-    if not any([resume, github_url, leetcode_url, linkedin_url]):
+    # Build unified platform_urls dict
+    urls_dict = {}
+    if platform_urls:
+        try:
+            urls_dict = json.loads(platform_urls)
+            if not isinstance(urls_dict, dict):
+                raise ValueError("platform_urls must be a JSON object")
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid platform_urls: {str(e)}")
+
+    # Merge legacy params (only if not already in urls_dict)
+    if github_url and "github" not in urls_dict:
+        urls_dict["github"] = github_url
+    if leetcode_url and "leetcode" not in urls_dict:
+        urls_dict["leetcode"] = leetcode_url
+    if linkedin_url and "linkedin" not in urls_dict:
+        urls_dict["linkedin"] = linkedin_url
+
+    # Validate: at least one input
+    if not any([resume, urls_dict]):
         raise HTTPException(
             status_code=400,
-            detail="At least one input (resume, github_url, leetcode_url, or linkedin_url) required"
+            detail="At least one input (resume or platform URL) required"
         )
 
     # Create job
@@ -47,10 +74,12 @@ async def extract_raw_data(
         status="pending",
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
+        platform_urls=urls_dict if urls_dict else None,
+        # Legacy columns — populated from urls_dict for backward compat
         resume_url=None,
-        github_url=github_url,
-        leetcode_url=leetcode_url,
-        linkedin_url=linkedin_url
+        github_url=urls_dict.get("github"),
+        leetcode_url=urls_dict.get("leetcode"),
+        linkedin_url=urls_dict.get("linkedin"),
     )
 
     try:
@@ -76,15 +105,13 @@ async def extract_raw_data(
         try:
             await extraction_service.run_extraction(
                 job_id=job_id,
+                platform_urls=dict(urls_dict),  # copy to avoid mutation
                 resume_bytes=resume_bytes,
                 resume_filename=resume_filename,
-                github_url=github_url,
-                leetcode_url=leetcode_url,
-                linkedin_url=linkedin_url,
                 candidate_name=candidate_name,
             )
         except Exception as e:
-            logger.error(f"Background extraction crashed for {job_id}: {e}")
+            logger.error(f"Background extraction crashed for job_id={job_id}: {e}", exc_info=True)
             try:
                 db_session = SessionLocal()
                 job = db_session.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()

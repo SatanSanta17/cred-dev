@@ -81,9 +81,11 @@ cred-dev/
 │   │   ├── problem-validation.tsx    # Rotating pain point quotes
 │   │   └── footer.tsx               # CTA + copyright
 │   ├── shared/                       # Reusable across pages
-│   │   ├── brand.tsx                 # CredDev logo + gradient name
 │   │   ├── back-link.tsx             # Back navigation
+│   │   ├── brand.tsx                 # CredDev logo + gradient name
 │   │   ├── gradient-text.tsx
+│   │   ├── quote-card.tsx            # Single quote card
+│   │   ├── quotes-carousel.tsx       # Rotating quote carousel (desktop + mobile)
 │   │   └── waitlist-count.tsx        # Real-time waitlist counter
 │   └── ui/                           # shadcn/ui primitives
 ├── lib/                              # Frontend utilities

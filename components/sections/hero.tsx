@@ -52,7 +52,7 @@ export function Hero() {
             transition={{ delay: 0.3 }}
             className="text-lg sm:text-xl md:text-2xl text-gray-300 font-light mb-10 max-w-2xl mx-auto px-4"
           >
-            AI-powered credibility reports from your GitHub, LeetCode, and resume
+            AI-powered credibility reports from your upskilling platforms
           </motion.p>
 
           {/* CTA */}

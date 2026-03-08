@@ -123,7 +123,7 @@ def _run_generation_pipeline(job_id: str):
         progress_manager.update(job_id, "generating_extensive")
         extensive_cb = _make_progress_callback(job_id, "generating_extensive", 10, 48, EXTENSIVE_MESSAGES)
         extensive = report_gen._call_llm_streaming(
-            report_gen._build_system_message("extensive"),
+            report_gen._build_system_message("extensive", raw_data=raw_data),
             report_gen._extensive_prompt(context),
             progress_callback=extensive_cb,
         )
@@ -132,7 +132,7 @@ def _run_generation_pipeline(job_id: str):
         progress_manager.update(job_id, "generating_developer")
         developer_cb = _make_progress_callback(job_id, "generating_developer", 50, 78, DEVELOPER_MESSAGES)
         developer = report_gen._call_llm_streaming(
-            report_gen._build_system_message("developer"),
+            report_gen._build_system_message("developer", raw_data=raw_data),
             report_gen._developer_prompt(context),
             progress_callback=developer_cb,
         )
@@ -141,7 +141,7 @@ def _run_generation_pipeline(job_id: str):
         progress_manager.update(job_id, "generating_recruiter")
         recruiter_cb = _make_progress_callback(job_id, "generating_recruiter", 80, 93, RECRUITER_MESSAGES)
         recruiter = report_gen._call_llm_streaming(
-            report_gen._build_system_message("recruiter"),
+            report_gen._build_system_message("recruiter", raw_data=raw_data),
             report_gen._recruiter_prompt(context),
             progress_callback=recruiter_cb,
         )
@@ -213,7 +213,21 @@ async def generate_reports(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    allowed = ["extracted", "failed", "completed"]
+    # Guard: generation already in progress — return 409 with user-friendly message
+    if job.status == "generating":
+        raise HTTPException(
+            status_code=409,
+            detail="Report generation is already in progress. Please wait for it to complete."
+        )
+
+    # Guard: already completed — only allow with explicit retry flag
+    if job.status == "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Reports have already been generated for this analysis."
+        )
+
+    allowed = ["extracted", "failed"]
     if job.status not in allowed:
         raise HTTPException(
             status_code=400,
@@ -314,7 +328,7 @@ async def resend_email(job_id: str, db: Session = Depends(get_db)):
             reports=reports,
         )
     except Exception as e:
-        logger.error(f"Resend email failed for {job_id}: {e}")
+        logger.error(f"Resend email failed for job_id={job_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Email delivery failed: {str(e)}")
 
     # Clear the email_failed error message since email succeeded now

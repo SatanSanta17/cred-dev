@@ -12,12 +12,12 @@ FastAPI service that extracts developer data from multiple platforms and generat
 Phase 1: EXTRACTION                    Phase 2: GENERATION
 POST /api/v1/extract                   POST /api/v1/generate/{job_id}
         ↓                                      ↓
-┌─────────────────┐                   ┌──────────────────────┐
-│ GitHub Fetcher   │                   │ LLM Report Generator │
-│ LeetCode Fetcher │  → raw_data DB   │ (3 reports with      │  → reports DB
-│ LinkedIn Fetcher │                   │  guardrails system)  │  → PDF email
-│ Resume Parser    │                   └──────────────────────┘
-└─────────────────┘                            ↓
+┌────────────────────┐                 ┌──────────────────────┐
+│ GitHub Fetcher     │                 │ LLM Report Generator │
+│ LeetCode Fetcher   │  → raw_data DB │ (3 reports with      │  → reports DB
+│ WebSearch Fetcher  │                 │  guardrails system)  │  → PDF email
+│ Resume Parser      │                 └──────────────────────┘
+└────────────────────┘                            ↓
                                       SSE progress streaming
                                       GET /api/v1/generate/{job_id}/stream
 ```
@@ -27,8 +27,9 @@ POST /api/v1/extract                   POST /api/v1/generate/{job_id}
 ```
 server/cred-service/
 ├── app/
-│   ├── main.py                 # FastAPI app, CORS, startup
+│   ├── main.py                 # FastAPI app, CORS, startup, request logging middleware
 │   ├── config.py               # Environment settings (pydantic-settings)
+│   ├── logging_config.py       # Centralized logging setup (JSON prod / human-readable dev)
 │   ├── database.py             # SQLAlchemy models (AnalysisJob, RawData, Report)
 │   └── routes/
 │       ├── extract.py          # POST /extract, GET /extract/{job_id}
@@ -38,7 +39,8 @@ server/cred-service/
 │   ├── extraction.py           # Orchestrates platform fetchers
 │   ├── github_fetcher.py       # GitHub API (2 queries: repos/profile + production signals)
 │   ├── leetcode_fetcher.py     # LeetCode GraphQL API
-│   ├── linkedin_fetcher.py     # LinkedIn URL/username capture
+│   ├── web_search_fetcher.py   # Generic profile extractor via OpenAI web search
+│   ├── platform_utils.py       # Domain-to-platform detection utility
 │   ├── resume_parser.py        # PDF resume text extraction (PyPDF2)
 │   ├── raw_data_loader.py      # Loads raw_data from DB for generation
 │   ├── report_generator.py     # LLM prompts + guardrails system
@@ -58,12 +60,12 @@ Health check. Returns `{"status": "healthy"}`.
 ### `POST /api/v1/extract`
 Start raw data extraction. Accepts multipart form data.
 
-**Parameters** (all optional, at least one required):
+**Parameters** (all optional, at least one URL or resume required):
 | Field | Type | Description |
 |-------|------|-------------|
-| `github_url` | string | GitHub profile URL |
-| `leetcode_url` | string | LeetCode profile URL |
-| `linkedin_url` | string | LinkedIn profile URL |
+| `platform_urls` | string (JSON) | All platform URLs as JSON: `{"github": "...", "kaggle": "...", ...}` |
+| `github_url` | string | GitHub profile URL (legacy, for backward compat) |
+| `leetcode_url` | string | LeetCode profile URL (legacy, for backward compat) |
 | `resume` | file | PDF resume upload |
 | `candidate_name` | string | Candidate's name (default: "Anonymous Candidate") |
 | `candidate_email` | string | Email to receive PDF reports |
@@ -221,6 +223,7 @@ RESEND_FROM_EMAIL=CredDev <you@yourdomain.com>
 
 # App
 DEBUG=false
+LOG_LEVEL=INFO                          # DEBUG, INFO, WARNING, ERROR (default: INFO; overridden to DEBUG when DEBUG=true)
 ```
 
 ### Database URL notes
@@ -246,17 +249,18 @@ Three tables, auto-created on startup via `init_db()`:
 | `created_at` | TIMESTAMP | |
 | `updated_at` | TIMESTAMP | |
 | `error_message` | TEXT | Set on failure |
-| `resume_url` | VARCHAR | |
-| `github_url` | VARCHAR | |
-| `leetcode_url` | VARCHAR | |
-| `linkedin_url` | VARCHAR | |
+| `platform_urls` | JSON | All submitted URLs: `{"github": "...", "leetcode": "...", ...}` |
+| `resume_url` | VARCHAR | Legacy, unused |
+| `github_url` | VARCHAR | Legacy — populated from platform_urls |
+| `leetcode_url` | VARCHAR | Legacy — populated from platform_urls |
+| `linkedin_url` | VARCHAR | Legacy — populated from platform_urls |
 
 ### `raw_data`
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | SERIAL PK | |
 | `job_id` | VARCHAR FK | → analysis_jobs.id |
-| `data_type` | VARCHAR | github, leetcode, resume, linkedin |
+| `data_type` | VARCHAR | Any platform_id: github, leetcode, resume, kaggle, linkedin, etc. |
 | `data` | JSON | Raw platform response |
 | `fetched_at` | TIMESTAMP | |
 

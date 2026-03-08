@@ -27,7 +27,10 @@ class AnalysisJob(Base):
     updated_at = Column(DateTime)
     error_message = Column(Text, nullable=True)
 
-    # Inputs
+    # Platform URLs — flexible JSON: {"github": "url", "kaggle": "url", ...}
+    platform_urls = Column(JSON, nullable=True)
+
+    # Legacy columns — kept for backward compat, populated from platform_urls
     resume_url = Column(String, nullable=True)
     github_url = Column(String, nullable=True)
     leetcode_url = Column(String, nullable=True)
@@ -43,7 +46,7 @@ class RawData(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(String, ForeignKey("analysis_jobs.id"))
-    data_type = Column(String)  # github, leetcode, resume, linkedin
+    data_type = Column(String)  # any platform_id: github, leetcode, resume, kaggle, etc.
     data = Column(JSON)
     fetched_at = Column(DateTime)
 
