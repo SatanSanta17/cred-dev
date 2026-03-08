@@ -13,7 +13,7 @@
 
 CredDev is a developer credibility platform that pulls real data from GitHub, LeetCode, LinkedIn, and resumes — then uses AI to generate three intelligence reports delivered as PDFs to the candidate's inbox.
 
-No branding. No hype. Just verified, fact-based developer analysis.
+Just verified, fact-based developer analysis.
 
 ---
 
@@ -60,21 +60,32 @@ PDF reports emailed to the candidate
 
 ```
 cred-dev/
-├── app/                              # Next.js pages
+├── app/                              # Next.js App Router pages
 │   ├── page.tsx                      # Landing page
-│   ├── try/page.tsx                  # /try — main user flow
-│   ├── waitlist/page.tsx             # /waitlist — email signup
-│   ├── report/                       # Sample report pages
+│   ├── try/                          # /try — report generation flow
+│   │   ├── page.tsx
+│   │   └── _components/              # Co-located route components
+│   │       ├── try-flow.tsx          # State machine: form → extract → generate → success
+│   │       ├── try-form.tsx          # Input form (5 fields + resume upload)
+│   │       └── generation-loader.tsx # Animated progress display
+│   ├── recruiters/                   # /recruiters — "coming soon" recruiter page
+│   │   ├── page.tsx
+│   │   └── _components/              # Co-located route components
+│   ├── about/                        # /about — team + origin story
+│   ├── report/                       # Static sample report pages
 │   └── layout.tsx
-├── components/sections/              # Page sections
-│   ├── hero.tsx                      # Hero with "Try Now" CTA
-│   ├── try-form.tsx                  # Glassmorphic input form (5 fields + resume upload)
-│   ├── try-flow.tsx                  # State machine: form → extracting → generating → success
-│   ├── generation-loader.tsx         # Animated orbital progress loader
-│   ├── waitlist-form.tsx             # Supabase-connected waitlist
-│   ├── problem.tsx, how-it-works.tsx # Landing page sections
-│   ├── for-developers.tsx, for-recruiters.tsx
-│   └── footer.tsx
+├── components/
+│   ├── sections/                     # Landing page sections
+│   │   ├── hero.tsx                  # Developer-focused hero with branding
+│   │   ├── how-it-works.tsx          # 3-step process
+│   │   ├── problem-validation.tsx    # Rotating pain point quotes
+│   │   └── footer.tsx               # CTA + copyright
+│   ├── shared/                       # Reusable across pages
+│   │   ├── brand.tsx                 # CredDev logo + gradient name
+│   │   ├── back-link.tsx             # Back navigation
+│   │   ├── gradient-text.tsx
+│   │   └── waitlist-count.tsx        # Real-time waitlist counter
+│   └── ui/                           # shadcn/ui primitives
 ├── lib/                              # Frontend utilities
 │   ├── api.ts                        # Backend API client
 │   ├── use-generation-progress.ts    # SSE hook for real-time progress
@@ -100,7 +111,7 @@ npm run dev
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_CREDDEV_API_URL=http://localhost:8000   # backend URL
+NEXT_PUBLIC_CRED_SERVICE_API_URL=http://localhost:8000   # backend URL
 ```
 
 ### Backend
@@ -143,7 +154,7 @@ See [`server/cred-service/README.md`](server/cred-service/README.md) for full ba
 ### Key deployment notes
 
 - Backend needs the Supabase **pooler URL** (`pooler.supabase.com:6543`), not the direct connection — cloud platforms can't reach Supabase's IPv6 addresses
-- Set `NEXT_PUBLIC_CREDDEV_API_URL` in Vercel to point to the Render backend URL
+- Set `NEXT_PUBLIC_CRED_SERVICE_API_URL` in Vercel to point to the Render backend URL
 - CORS is configured to allow `localhost:3000` and `cred-dev17.vercel.app`
 - SMTP is blocked on cloud platforms — use Brevo (HTTP API) in production
 
