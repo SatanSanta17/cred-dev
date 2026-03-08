@@ -1,6 +1,6 @@
 'use client'
 
-import { TryFlow } from '@/components/sections/try-flow'
+import { TryFlow } from './_components/try-flow'
 import { BackLink } from '@/components/shared/back-link'
 
 export default function TryPage() {

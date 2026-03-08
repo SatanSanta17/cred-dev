@@ -121,11 +121,11 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 
 | Component | File | Responsibility |
 |-----------|------|----------------|
-| `TryFlow` | `components/sections/try-flow.tsx` | Orchestrates the full form → extract → generate → success flow. State machine: `form` → `extracting` → `generating` → `success`/`error`. Manages polling with `MAX_POLLS=40` and `generationTriggered` guard flag. |
-| `TryForm` | `components/sections/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, LinkedIn URL, resume (PDF, max 10MB). Zod validation requires at least one profile URL. |
-| `GenerationLoader` | `components/sections/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
+| `TryFlow` | `app/try/_components/try-flow.tsx` | Orchestrates the full form → extract → generate → success flow. State machine: `form` → `extracting` → `generating` → `success`/`error`. Manages polling with `MAX_POLLS=40` and `generationTriggered` guard flag. |
+| `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, LinkedIn URL, resume (PDF, max 10MB). Zod validation requires at least one profile URL. |
+| `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
-| `WaitlistForm` | `components/sections/waitlist-form.tsx` | Inserts directly into Supabase `waitlist` table via client SDK. |
+| `WaitlistForm` | `app/waitlist/_components/waitlist-form.tsx` | Inserts directly into Supabase `waitlist` table via client SDK. |
 | `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. |
 
 #### API Client (`lib/api.ts`)
@@ -319,8 +319,16 @@ cred-dev/
 │   ├── layout.tsx                # Root layout — Geist fonts, dark mode, Toaster
 │   ├── page.tsx                  # Landing page — assembles section components
 │   ├── globals.css               # Tailwind styles
-│   ├── try/page.tsx              # /try — report generation flow
-│   ├── waitlist/page.tsx         # /waitlist — standalone waitlist form
+│   ├── try/                      # /try — report generation flow
+│   │   ├── page.tsx
+│   │   └── _components/          # Route-specific (co-located)
+│   │       ├── try-flow.tsx      # Core: form → extract → generate → result
+│   │       ├── try-form.tsx      # Input form with zod validation
+│   │       └── generation-loader.tsx # Animated progress display
+│   ├── waitlist/                 # /waitlist — standalone waitlist form
+│   │   ├── page.tsx
+│   │   └── _components/          # Route-specific (co-located)
+│   │       └── waitlist-form.tsx # Supabase direct insert
 │   ├── about/                    # /about — team + origin story
 │   │   ├── layout.tsx
 │   │   └── page.tsx
@@ -328,17 +336,14 @@ cred-dev/
 │       ├── Burhanuddin/page.tsx
 │       └── Pradeep/page.tsx
 ├── components/
-│   ├── sections/                 # Page-level components
-│   │   ├── hero.tsx              # Landing: developer-focused hero, mobile-first
+│   ├── sections/                 # Landing page sections only
+│   │   ├── hero.tsx              # Landing: developer-focused hero with Brand
 │   │   ├── how-it-works.tsx      # Landing: compact 3-step process
 │   │   ├── problem-validation.tsx # Landing: rotating quotes from real conversations
-│   │   ├── footer.tsx            # Landing: condensed CTA + copyright
-│   │   ├── try-flow.tsx          # Core: form → extract → generate → result
-│   │   ├── try-form.tsx          # Input form with zod validation
-│   │   ├── generation-loader.tsx # Animated progress display
-│   │   └── waitlist-form.tsx     # Supabase direct insert
-│   ├── shared/                   # Reusable components
+│   │   └── footer.tsx            # Landing: condensed CTA + copyright
+│   ├── shared/                   # Reusable components (used across pages)
 │   │   ├── back-link.tsx         # Back navigation (used on /try, /report)
+│   │   ├── brand.tsx             # CredDev logo icon + gradient name
 │   │   ├── gradient-text.tsx
 │   │   └── waitlist-count.tsx    # Real-time waitlist counter
 │   └── ui/                       # shadcn/ui primitives

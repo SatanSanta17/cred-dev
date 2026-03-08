@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-03-08] — Branding + Component Restructure (PRD-005)
+
+### Added
+- `components/shared/brand.tsx` — reusable CredDev brand component (logo icon + gradient name). Props: `size` (sm/md/lg), `className`.
+- CredDev branding at the top of the hero section (landing page)
+- `app/try/_components/` — co-located try-page components (Next.js convention)
+- `app/waitlist/_components/` — co-located waitlist components
+
+### Changed
+- `components/sections/hero.tsx` — Brand component added above headline
+- `components/shared/back-link.tsx` — `showBrand` mode now uses Brand component instead of inline GradientText
+- Moved `try-flow.tsx`, `try-form.tsx`, `generation-loader.tsx` from `components/sections/` to `app/try/_components/`
+- Moved `waitlist-form.tsx` from `components/sections/` to `app/waitlist/_components/`
+- `components/sections/` now contains only landing page sections (hero, how-it-works, problem-validation, footer)
+
 ## [2026-03-06] — Honest Sample Report Page (PRD-004)
 
 ### Changed

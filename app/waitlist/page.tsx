@@ -1,4 +1,4 @@
-import { WaitlistForm } from '@/components/sections/waitlist-form'
+import { WaitlistForm } from './_components/waitlist-form'
 import { Footer } from '@/components/sections/footer'
 
 export const metadata = {

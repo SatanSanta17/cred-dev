@@ -23,7 +23,7 @@ const QUOTES = [
   },
   {
     text: 'We rejected a great candidate because their resume looked weak. Turns out their open source work was incredible.',
-    role: 'Engineering Manager',
+    role: 'Hiring Manager',
   },
   // Add more quotes here — the component auto-rotates if > 3
 ]

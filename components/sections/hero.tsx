@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Zap, ExternalLink } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
+import { Brand } from '@/components/shared/brand'
 import Link from 'next/link'
 
 export function Hero() {
@@ -24,6 +25,16 @@ export function Hero() {
           transition={{ duration: 0.8 }}
           className="text-center max-w-4xl mx-auto"
         >
+          {/* Brand */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <Brand size="lg" />
+          </motion.div>
+
           {/* Main Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}

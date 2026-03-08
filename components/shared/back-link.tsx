@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { GradientText } from '@/components/shared/gradient-text'
+import { Brand } from '@/components/shared/brand'
 
 interface BackLinkProps {
   href?: string
@@ -10,8 +10,8 @@ interface BackLinkProps {
 
 /**
  * Reusable back navigation link.
- * - Default: links to "/" with "Back to Home" text
- * - showBrand: replaces text with CredDev gradient brand name
+ * - Default: links to "/" with "Back to CredDev" text
+ * - showBrand: replaces text with CredDev logo + gradient name
  * - Used on /try page (with brand) and /report pages (without brand)
  */
 export function BackLink({ href = '/', showBrand = false, className = '' }: BackLinkProps) {
@@ -20,15 +20,15 @@ export function BackLink({ href = '/', showBrand = false, className = '' }: Back
       href={href}
       className={`inline-flex items-center gap-2 group ${className}`}
     >
-      <ArrowLeft className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
       {showBrand ? (
-        <span className="text-xl font-bold">
-          <GradientText>CredDev</GradientText>
-        </span>
+        <Brand size="sm" />
       ) : (
-        <span className="text-sm text-slate-500 group-hover:text-purple-400 transition-colors">
-          Back to CredDev
-        </span>
+        <>
+          <ArrowLeft className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
+          <span className="text-sm text-slate-500 group-hover:text-purple-400 transition-colors">
+            Back to CredDev
+          </span>
+        </>
       )}
     </Link>
   )

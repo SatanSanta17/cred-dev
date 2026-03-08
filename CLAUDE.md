@@ -4,7 +4,7 @@
 
 1. Read `ARCHITECTURE.md` before making any changes — it contains the full system design, file map, and data flow.
 2. If modifying backend services, read the relevant service file first — don't assume from memory.
-3. If modifying frontend flow, read `components/sections/try-flow.tsx` — it's the orchestrator.
+3. If modifying a frontend page, read its `_components/` or relevant section files first — don't assume from memory.
 4. Always take ask for plan confirmation before coding
 5. Never make a document without being asked for explicitly 
 
