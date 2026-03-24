@@ -139,46 +139,141 @@
   }
 }
 
-/* Custom animations for CredDev */
+/* ==========================================================================
+   CredDev Design Tokens
+   All shared brand colours, surfaces, and reusable patterns live here.
+   Components reference these via utility classes or var(--token-name).
+   See ARCHITECTURE.md "Design Tokens" section for naming conventions.
+   ========================================================================== */
+
+:root {
+  /* Brand accent colours (RGB triplets — use with opacity: rgb(var(--brand-purple) / 0.5)) */
+  --brand-purple: 168 85 247;       /* purple-500 — primary accent */
+  --brand-blue: 59 130 246;         /* blue-500   — secondary accent */
+  --brand-cyan: 34 211 238;         /* cyan-400   — tertiary accent */
+
+  /* Surface colours */
+  --surface-primary: 15 23 42;      /* slate-900 — main card/panel background */
+  --surface-page-mid: #0f172a;      /* slate-900 solid — page gradient midpoint */
+
+  /* Text colours */
+  --text-heading: #f1f5f9;          /* slate-100 */
+  --text-body: #9ca3af;             /* gray-400 */
+  --text-muted: #6b7280;            /* gray-500 */
+  --text-faint: #4b5563;            /* gray-600 */
+
+  /* Border colours */
+  --border-subtle: 255 255 255;     /* white (used at 10% opacity) */
+  --border-card: #1e293b;           /* slate-800 */
+
+  /* CTA gradient stops */
+  --cta-from: #9333ea;              /* purple-600 */
+  --cta-to: #2563eb;                /* blue-600 */
+  --cta-hover-from: #7e22ce;        /* purple-700 */
+  --cta-hover-to: #1d4ed8;          /* blue-700 */
+}
+
+/* ==========================================================================
+   CredDev Utility Classes
+   ========================================================================== */
+
 @layer utilities {
+
+  /* --- Blob animation --- */
   .animate-blob {
     animation: blob 7s infinite;
   }
-  
   .animation-delay-2000 {
     animation-delay: 2s;
   }
-  
   .animation-delay-4000 {
     animation-delay: 4s;
   }
-  
   @keyframes blob {
-    0%, 100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(30px, -50px) scale(1.1);
-    }
-    66% {
-      transform: translate(-20px, 20px) scale(0.9);
-    }
-  }
-  
-  .glow {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
-  }
-  
-  .glass {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(30px, -50px) scale(1.1); }
+    66%      { transform: translate(-20px, 20px) scale(0.9); }
   }
 
+  /* --- Page background gradient (vertical dark-to-dark via slate-900) --- */
+  .bg-page-gradient {
+    background: linear-gradient(to bottom, #000, var(--surface-page-mid), #000);
+  }
+
+  /* --- CTA button gradient --- */
+  .bg-cta-gradient {
+    background: linear-gradient(to right, var(--cta-from), var(--cta-to));
+  }
+  .bg-cta-gradient:hover {
+    background: linear-gradient(to right, var(--cta-hover-from), var(--cta-hover-to));
+  }
+
+  /* --- Brand gradient text (purple → blue → cyan) --- */
+  .text-brand-gradient {
+    background: linear-gradient(to right, #a855f7, #3b82f6, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* --- Glass morphism surfaces --- */
+  /* Primary: heavy blur, used for modal-style cards (try-flow, generation-loader) */
+  .glass-card {
+    background: rgb(var(--surface-primary) / 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgb(var(--border-subtle) / 0.1);
+  }
+  /* Light: softer blur, used for content cards (product-vision, waitlist form) */
+  .glass-card-light {
+    background: rgb(var(--surface-primary) / 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-card);
+  }
+  /* Legacy alias — existing components may reference .glass */
+  .glass {
+    background: rgb(var(--surface-primary) / 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgb(var(--border-subtle) / 0.1);
+  }
+
+  /* --- Background grid decoration --- */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, #4f4f4f2e 1px, transparent 1px),
+      linear-gradient(to bottom, #4f4f4f2e 1px, transparent 1px);
+    background-size: 14px 24px;
+    mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 70%, transparent 110%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 70%, transparent 110%);
+  }
+
+  /* --- Glow shadows --- */
+  .glow-purple { box-shadow: 0 0 12px rgb(var(--brand-purple) / 0.6); }
+  .glow-blue   { box-shadow: 0 0 10px rgb(var(--brand-blue) / 0.6); }
+  .glow-cyan   { box-shadow: 0 0 8px rgb(var(--brand-cyan) / 0.6); }
+  /* Legacy alias — existing components may reference .glow */
+  .glow { box-shadow: 0 0 20px rgb(var(--brand-purple) / 0.4); }
+
+  /* --- Badge colour variants --- */
+  .badge-purple { border-color: rgb(var(--brand-purple) / 0.5); color: #a855f7; }
+  .badge-blue   { border-color: rgb(var(--brand-blue) / 0.5);   color: #3b82f6; }
+  .badge-cyan   { border-color: rgb(var(--brand-cyan) / 0.5);   color: #22d3ee; }
+
+  /* --- Form input base (dark theme) --- */
+  .input-dark {
+    background-color: #1e293b;
+    border-color: var(--border-card);
+  }
+  .input-dark:focus {
+    border-color: #22d3ee;
+  }
+
+  /* --- Gradient border (purple → blue diagonal) --- */
   .gradient-border {
     position: relative;
   }
-  
   .gradient-border::before {
     content: '';
     position: absolute;
@@ -191,15 +286,15 @@
     mask-composite: exclude;
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   }
-  
-  /* Mobile-friendly scrolling */
+
+  /* --- Mobile optimizations --- */
   @media (max-width: 768px) {
     .overflow-x-auto {
       -webkit-overflow-scrolling: touch;
     }
   }
-  
-  /* Reduce motion for users who prefer it */
+
+  /* --- Reduced motion preference --- */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

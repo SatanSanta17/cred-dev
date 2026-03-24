@@ -5,9 +5,9 @@ import { BackLink } from '@/components/shared/back-link'
 
 export default function TryPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-black via-slate-900 to-black relative overflow-hidden">
+    <main className="min-h-screen bg-page-gradient relative overflow-hidden">
       {/* Background Grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,#000_70%,transparent_110%)]" />
+      <div className="absolute inset-0 bg-grid" />
 
       {/* Gradient Orbs */}
       <div className="absolute top-20 -left-20 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob" />

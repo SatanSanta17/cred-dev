@@ -198,7 +198,7 @@ export function TryFlow() {
           >
             <div className="relative">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-lg" />
-              <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-white/10 p-10">
+              <div className="relative rounded-2xl glass-card p-10">
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -241,7 +241,7 @@ export function TryFlow() {
           >
             <div className="relative">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-lg" />
-              <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-green-500/20 p-10">
+              <div className="relative rounded-2xl glass-card !border-green-500/20 p-10">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -263,7 +263,7 @@ export function TryFlow() {
                       onClick={handleResendEmail}
                       disabled={resendLoading}
                       size="sm"
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      className="bg-cta-gradient"
                     >
                       {resendLoading ? (
                         <>
@@ -316,14 +316,14 @@ export function TryFlow() {
           >
             <div className="relative">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-red-500/20 to-orange-500/20 blur-lg" />
-              <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-red-500/20 p-10">
+              <div className="relative rounded-2xl glass-card !border-red-500/20 p-10">
                 <XCircle className="w-14 h-14 mx-auto mb-6 text-red-400" />
                 <h3 className="text-xl font-bold text-white mb-3">Something Went Wrong</h3>
                 <p className="text-gray-400 text-sm mb-6">{errorMessage}</p>
                 <div className="flex flex-col gap-3">
                   <Button
                     onClick={handleRetry}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                    className="bg-cta-gradient"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Try Again

@@ -35,7 +35,7 @@ export function ProductVision() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm border-cyan-500/50 text-cyan-400">
+          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm badge-cyan">
             What You'll Get
           </Badge>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-4">
@@ -56,7 +56,7 @@ export function ProductVision() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.15 }}
             >
-              <Card className="p-6 bg-slate-900/80 backdrop-blur-sm border-slate-800 h-full">
+              <Card className="p-6 glass-card-light h-full">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
                     <card.icon className="w-5 h-5 text-cyan-400" />

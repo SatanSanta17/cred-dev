@@ -3,7 +3,7 @@ import { RecruiterHero } from './_components/recruiter-hero'
 import { ProductVision } from './_components/product-vision'
 import { RecruiterQuotes } from './_components/recruiter-quotes'
 import { RecruiterWaitlistForm } from './_components/recruiter-waitlist-form'
-import { Footer } from '@/components/sections/footer'
+import { Footer } from '@/components/shared/footer'
 
 export const metadata: Metadata = {
   title: 'For Recruiters | CredDev',

@@ -30,7 +30,7 @@ export function Footer() {
             <Link href="/try">
               <Button
                 size="lg"
-                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
+                className="group bg-cta-gradient text-lg px-8 py-6 h-auto"
               >
                 <Zap className="mr-2 w-5 h-5" />
                 Generate Your Free Report

@@ -9,9 +9,9 @@ import Link from 'next/link'
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-black via-slate-900 to-black">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-page-gradient">
       {/* Animated Background Grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+      <div className="absolute inset-0 bg-grid" />
 
       {/* Gradient Orbs */}
       <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
@@ -65,7 +65,7 @@ export function Hero() {
             <Link href="/try">
               <Button
                 size="lg"
-                className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
+                className="group bg-cta-gradient text-lg px-8 py-6 h-auto"
               >
                 <Zap className="mr-2 w-5 h-5" />
                 Generate Your Free Report
