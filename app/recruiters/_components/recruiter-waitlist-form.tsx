@@ -126,7 +126,7 @@ export function RecruiterWaitlistForm() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm border-cyan-500/50 text-cyan-400">
+          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm badge-cyan">
             Early Access
           </Badge>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-4">
@@ -151,7 +151,7 @@ export function RecruiterWaitlistForm() {
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <Card className="p-8 bg-slate-900/80 backdrop-blur-lg border-slate-800 relative overflow-hidden">
+          <Card className="p-8 glass-card-light relative overflow-hidden">
             <div className="absolute inset-0 opacity-5">
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]" />
             </div>
@@ -167,7 +167,7 @@ export function RecruiterWaitlistForm() {
                   type="email"
                   placeholder="you@company.com"
                   {...register('email')}
-                  className="mt-2 h-12 bg-slate-800 border-slate-700 focus:border-cyan-500 transition-colors"
+                  className="mt-2 h-12 input-dark transition-colors"
                   disabled={loading}
                 />
                 {errors.email && (
@@ -185,7 +185,7 @@ export function RecruiterWaitlistForm() {
                   id="org"
                   placeholder="Your company name"
                   {...register('organization')}
-                  className="mt-2 h-12 bg-slate-800 border-slate-700 focus:border-cyan-500 transition-colors"
+                  className="mt-2 h-12 input-dark transition-colors"
                   disabled={loading}
                 />
               </div>
@@ -200,7 +200,7 @@ export function RecruiterWaitlistForm() {
                   id="teamSize"
                   placeholder="e.g. 5, 10-20, 50+"
                   {...register('teamSize')}
-                  className="mt-2 h-12 bg-slate-800 border-slate-700 focus:border-cyan-500 transition-colors"
+                  className="mt-2 h-12 input-dark transition-colors"
                   disabled={loading}
                 />
               </div>

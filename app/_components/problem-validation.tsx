@@ -45,7 +45,7 @@ export function ProblemValidation() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm border-purple-500/50 text-purple-400">
+          <Badge variant="outline" className="mb-4 px-4 py-2 text-sm badge-purple">
             Real Conversations
           </Badge>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-4">

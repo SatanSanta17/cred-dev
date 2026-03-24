@@ -13,9 +13,9 @@ export function RecruiterHero() {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-black via-slate-900 to-black">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-page-gradient">
       {/* Background Grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+      <div className="absolute inset-0 bg-grid" />
 
       {/* Gradient Orbs */}
       <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
@@ -42,7 +42,7 @@ export function RecruiterHero() {
             transition={{ delay: 0.1 }}
             className="mb-4 mt-8"
           >
-            <Badge variant="outline" className="px-4 py-2 text-sm border-cyan-500/50 text-cyan-400">
+            <Badge variant="outline" className="px-4 py-2 text-sm badge-cyan">
               Coming Soon for Recruiters
             </Badge>
           </motion.div>

@@ -1,6 +1,6 @@
 # CredDev Architecture
 
-> Last verified: 2026-03-08 — every file path, service, and dependency confirmed against actual code.
+> Last verified: 2026-03-24 — every file path, service, and dependency confirmed against actual code.
 
 ---
 
@@ -115,7 +115,6 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `/recruiters` | `app/recruiters/page.tsx` | Recruiter-focused "coming soon" page — hero, product vision, quotes, waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
 | `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Honest sample report page — real data from actual CredDev report (VERIFIED/UNVERIFIED skills, LeetCode stats, production signals, risk flags). PDF download available. |
-| `/report/Pradeep` | `app/report/Pradeep/page.tsx` | Static sample report page |
 
 #### Key Frontend Components
 
@@ -148,6 +147,47 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 | `NEXT_PUBLIC_CRED_SERVICE_API_URL` | Backend API base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+
+#### Design Tokens & Utility Classes
+
+All shared brand colours, surfaces, typography, and reusable UI patterns are defined as CSS custom properties and utility classes in `app/globals.css`. Components reference these tokens — never inline the raw colour values.
+
+**Token naming convention:** `--{category}-{name}` where category is one of `brand`, `surface`, `text`, `border`, `cta`.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--brand-purple` | `168 85 247` (RGB) | Primary accent — badges, glows, gradients |
+| `--brand-blue` | `59 130 246` (RGB) | Secondary accent — gradients, links |
+| `--brand-cyan` | `34 211 238` (RGB) | Tertiary accent — recruiter theme, badges |
+| `--surface-primary` | `15 23 42` (RGB) | Card/panel backgrounds |
+| `--surface-page-mid` | `#0f172a` | Page gradient midpoint |
+| `--text-heading` | `#f1f5f9` | Heading text |
+| `--text-body` | `#9ca3af` | Body/paragraph text |
+| `--text-muted` | `#6b7280` | Secondary text |
+| `--text-faint` | `#4b5563` | Tertiary/disabled text |
+| `--border-subtle` | `255 255 255` (RGB) | Glass borders (used at 10% opacity) |
+| `--border-card` | `#1e293b` | Card borders |
+| `--cta-from` / `--cta-to` | `#9333ea` / `#2563eb` | CTA button gradient |
+| `--cta-hover-from` / `--cta-hover-to` | `#7e22ce` / `#1d4ed8` | CTA button hover gradient |
+
+RGB triplet tokens (e.g., `168 85 247`) support opacity composition: `rgb(var(--brand-purple) / 0.5)`.
+
+**Utility class naming convention:** `.{purpose}-{variant}` — describes what the class does, not how.
+
+| Class | Purpose |
+|-------|---------|
+| `.bg-page-gradient` | Full-page vertical dark gradient (black → slate-900 → black) |
+| `.bg-cta-gradient` | CTA button gradient with hover state |
+| `.text-brand-gradient` | Brand gradient text (purple → blue → cyan) |
+| `.glass-card` | Heavy glass morphism surface (modals, primary cards) |
+| `.glass-card-light` | Light glass morphism surface (content cards, forms) |
+| `.bg-grid` | Decorative background grid with radial mask |
+| `.glow-purple` / `.glow-blue` / `.glow-cyan` | Coloured box-shadow glows |
+| `.badge-purple` / `.badge-blue` / `.badge-cyan` | Badge border + text colour variants |
+| `.input-dark` | Dark-themed form input base style |
+| `.gradient-border` | Purple-to-blue diagonal gradient border (via `::before`) |
+
+**Adding new tokens:** Define the CSS custom property in the `:root` block in `globals.css` following the `--{category}-{name}` convention. If it needs a utility class, add it inside the `@layer utilities` block. Update this table.
 
 ---
 
@@ -331,8 +371,12 @@ Every `logger.error()` call includes `exc_info=True` for full stack traces. Pipe
 cred-dev/
 ├── app/                          # Next.js App Router pages
 │   ├── layout.tsx                # Root layout — Geist fonts, dark mode, Toaster
-│   ├── page.tsx                  # Landing page — assembles section components
-│   ├── globals.css               # Tailwind styles
+│   ├── page.tsx                  # Landing page — thin composition shell
+│   ├── globals.css               # Tailwind styles + CredDev design tokens & utility classes
+│   ├── _components/              # Landing page sections (co-located)
+│   │   ├── hero.tsx              # Developer-focused hero with Brand
+│   │   ├── how-it-works.tsx      # Compact 3-step process
+│   │   └── problem-validation.tsx # Rotating quotes from real conversations
 │   ├── try/                      # /try — report generation flow
 │   │   ├── page.tsx
 │   │   └── _components/          # Route-specific (co-located)
@@ -348,20 +392,24 @@ cred-dev/
 │   │       └── recruiter-waitlist-form.tsx # Recruiter-only waitlist
 │   ├── about/                    # /about — team + origin story
 │   │   ├── layout.tsx
-│   │   └── page.tsx
-│   └── report/                   # Static sample report pages
-│       ├── Burhanuddin/page.tsx
-│       └── Pradeep/page.tsx
+│   │   ├── page.tsx              # Thin composition shell
+│   │   └── _components/          # Route-specific (co-located)
+│   │       ├── about-hero.tsx    # About page hero with back button
+│   │       ├── origin-story.tsx  # Founder's origin story card
+│   │       ├── team-section.tsx  # Team member cards + join CTA
+│   │       └── about-cta.tsx     # Bottom CTA section
+│   └── report/                   # Sample report pages
+│       ├── _components/          # Shared report sub-components
+│       │   ├── skill-group.tsx   # Verified/unverified skill badges with collapsible sources
+│       │   ├── signal-badge.tsx  # Production signal indicator (✓/✗)
+│       │   └── risk-flag-card.tsx # Expandable risk flag card
+│       └── Burhanuddin/page.tsx  # Real data sample report
 ├── components/
-│   ├── sections/                 # Landing page sections only
-│   │   ├── hero.tsx              # Landing: developer-focused hero with Brand
-│   │   ├── how-it-works.tsx      # Landing: compact 3-step process
-│   │   ├── problem-validation.tsx # Landing: rotating quotes from real conversations
-│   │   └── footer.tsx            # Landing: condensed CTA + copyright
-│   ├── shared/                   # Reusable components (used across pages)
-│   │   ├── back-link.tsx         # Back navigation (used on /try, /report)
+│   ├── shared/                   # Reusable components (used across 2+ routes)
+│   │   ├── back-link.tsx         # Back navigation (used on /try, /report, /recruiters)
 │   │   ├── brand.tsx             # CredDev logo icon + gradient name
-│   │   ├── gradient-text.tsx
+│   │   ├── footer.tsx            # Condensed CTA + copyright (used on /, /recruiters)
+│   │   ├── gradient-text.tsx     # Brand gradient text utility (used across 4+ routes)
 │   │   ├── quote-card.tsx        # Single quote card (used by QuotesCarousel)
 │   │   ├── quotes-carousel.tsx   # Rotating quote carousel — desktop 3-col, mobile 1-card
 │   │   └── waitlist-count.tsx    # Real-time waitlist counter

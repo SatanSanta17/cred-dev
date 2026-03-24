@@ -31,7 +31,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
         {/* Outer glow */}
         <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-purple-500/30 via-blue-500/30 to-cyan-500/30 blur-lg opacity-60 animate-pulse" />
 
-        <div className="relative rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-white/10 p-8 sm:p-12 overflow-hidden">
+        <div className="relative rounded-3xl glass-card p-8 sm:p-12 overflow-hidden">
           {/* Background particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(6)].map((_, i) => (
@@ -65,7 +65,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                 animate={{ rotate: 360 }}
                 transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
               >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.6)]" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400 glow-purple" />
               </motion.div>
 
               {/* Middle ring */}
@@ -74,7 +74,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                 animate={{ rotate: -360 }}
                 transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
               >
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2.5 h-2.5 rounded-full bg-blue-400 glow-blue" />
               </motion.div>
 
               {/* Inner ring */}
@@ -83,7 +83,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                 animate={{ rotate: 360 }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
               >
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.6)]" />
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-cyan-400 glow-cyan" />
               </motion.div>
 
               {/* Center percentage */}
@@ -94,7 +94,7 @@ export function GenerationLoader({ progress, candidateName }: GenerationLoaderPr
                   animate={{ scale: 1, opacity: 1 }}
                   className="text-center"
                 >
-                  <span className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">
+                  <span className="text-4xl font-bold text-brand-gradient">
                     {percentage}%
                   </span>
                 </motion.div>

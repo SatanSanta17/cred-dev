@@ -1,7 +1,7 @@
-import { Hero } from '@/components/sections/hero'
-import { HowItWorks } from '@/components/sections/how-it-works'
-import { ProblemValidation } from '@/components/sections/problem-validation'
-import { Footer } from '@/components/sections/footer'
+import { Hero } from './_components/hero'
+import { HowItWorks } from './_components/how-it-works'
+import { ProblemValidation } from './_components/problem-validation'
+import { Footer } from '@/components/shared/footer'
 
 export default function Home() {
   return (

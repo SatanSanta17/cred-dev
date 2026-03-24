@@ -15,13 +15,13 @@ import {
   FileText,
   Briefcase,
   Shield,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react'
 import { GradientText } from '@/components/shared/gradient-text'
 import { BackLink } from '@/components/shared/back-link'
+import { SkillGroup } from '../_components/skill-group'
+import { SignalBadge } from '../_components/signal-badge'
+import { RiskFlagCard } from '../_components/risk-flag-card'
 import Link from 'next/link'
-import { useState } from 'react'
 
 // ============================================================
 // All data on this page comes from the real extensive report
@@ -547,120 +547,3 @@ export default function BurhanuddinReportPage() {
   )
 }
 
-// ============================================================
-// Sub-components
-// ============================================================
-
-function SkillGroup({
-  title,
-  skills,
-}: {
-  title: string
-  skills: { name: string; verified: boolean; source: string }[]
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <Card className="p-4 bg-slate-800/30 border-slate-700">
-      <p className="text-slate-400 text-sm font-medium mb-3">{title}</p>
-      <div className="flex flex-wrap gap-2">
-        {skills.map((skill) => (
-          <Badge
-            key={skill.name}
-            className={
-              skill.verified
-                ? 'bg-green-500/10 border-green-500/30 text-green-400 gap-1'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-400 gap-1'
-            }
-          >
-            {skill.verified ? (
-              <CheckCircle2 className="w-3 h-3" />
-            ) : (
-              <AlertTriangle className="w-3 h-3" />
-            )}
-            {skill.name}
-          </Badge>
-        ))}
-      </div>
-
-      {/* Collapsible source details */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-slate-600 text-xs mt-3 hover:text-slate-400 transition-colors"
-      >
-        {expanded ? (
-          <ChevronUp className="w-3 h-3" />
-        ) : (
-          <ChevronDown className="w-3 h-3" />
-        )}
-        {expanded ? 'Hide' : 'Show'} verification sources
-      </button>
-
-      {expanded && (
-        <div className="mt-2 space-y-1">
-          {skills.map((skill) => (
-            <p key={skill.name} className="text-slate-600 text-xs">
-              <span
-                className={
-                  skill.verified ? 'text-green-600' : 'text-amber-600'
-                }
-              >
-                {skill.name}:
-              </span>{' '}
-              {skill.source}
-            </p>
-          ))}
-        </div>
-      )}
-    </Card>
-  )
-}
-
-function SignalBadge({ label, present }: { label: string; present: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${present
-        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-        : 'bg-slate-800 text-slate-600 border border-slate-700'
-        }`}
-    >
-      {present ? '✓' : '✗'} {label}
-    </span>
-  )
-}
-
-function RiskFlagCard({
-  flag,
-}: {
-  flag: { title: string; description: string; source: string }
-}) {
-  const [expanded, setExpanded] = useState(false)
-
-  return (
-    <Card className="p-4 bg-amber-500/5 border-amber-500/20">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-        <div className="flex-1">
-          <p className="text-white text-sm font-medium">{flag.title}</p>
-          <p className="text-slate-400 text-sm mt-1">{flag.description}</p>
-
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-slate-600 text-xs mt-2 hover:text-slate-400 transition-colors"
-          >
-            {expanded ? (
-              <ChevronUp className="w-3 h-3" />
-            ) : (
-              <ChevronDown className="w-3 h-3" />
-            )}
-            {expanded ? 'Hide' : 'Show'} source
-          </button>
-
-          {expanded && (
-            <p className="text-slate-600 text-xs mt-1">{flag.source}</p>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
