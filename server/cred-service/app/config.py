@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     cred_service_supabase_service_role_key: Optional[str] = None
     cred_service_supabase_service_key: Optional[str] = None
 
+    # Supabase Auth — JWKS-based JWT validation (ES256)
+    supabase_project_ref: Optional[str] = None
+
     # Email (SMTP for local dev, Resend for production)
     smtp_host: Optional[str] = None
     smtp_port: int = 587
@@ -51,10 +54,6 @@ class Settings(BaseSettings):
         url = None
         if self.cred_service_database_url:
             url = self.cred_service_database_url
-        elif self.cred_service_postgres_url_non_pooling:
-            url = self.cred_service_postgres_url_non_pooling
-        elif self.cred_service_postgres_url:
-            url = self.cred_service_postgres_url
 
         if url:
             # SQLAlchemy requires "postgresql://" not "postgres://"
@@ -70,6 +69,18 @@ class Settings(BaseSettings):
 
     def get_supabase_key(self) -> str:
         return self.cred_service_supabase_service_role_key or self.cred_service_supabase_service_key or ""
+
+    def get_supabase_jwks_url(self) -> str:
+        """Return the JWKS endpoint URL for Supabase Auth JWT validation."""
+        if self.supabase_project_ref:
+            return f"https://{self.supabase_project_ref}.supabase.co/auth/v1/jwks"
+        # Fallback: derive project ref from the Supabase URL
+        url = self.get_supabase_url()
+        if url:
+            # https://xdwmbfluuhyvtuseibfq.supabase.co → xdwmbfluuhyvtuseibfq
+            ref = url.replace("https://", "").split(".")[0]
+            return f"https://{ref}.supabase.co/auth/v1/jwks"
+        return ""
 
 
 settings = Settings()
