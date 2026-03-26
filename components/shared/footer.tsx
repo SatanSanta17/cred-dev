@@ -27,7 +27,7 @@ export function Footer() {
             <p className="text-lg text-gray-400 mb-8 px-4">
               Get your AI-powered credibility report in minutes
             </p>
-            <Link href="/try">
+            <Link href="/chat">
               <Button
                 size="lg"
                 className="group bg-cta-gradient text-lg px-8 py-6 h-auto"

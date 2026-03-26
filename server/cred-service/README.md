@@ -314,7 +314,10 @@ curl http://localhost:8000/api/v1/generate/{job_id}
 
 Currently deployed on **Render** (free tier).
 
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Start command:
+`cd server/cred-service`
+`source venv/bin/activate`
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Uses Supabase pooler URL for database connectivity
 - Brevo HTTP API for email (SMTP blocked on cloud platforms)
 - Render health check path: `/health`

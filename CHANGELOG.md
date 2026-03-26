@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-03-27] — Chat Interface + Progressive Auth — Part 1 (PRD-010)
+
+### Added
+- `/chat` route — full-viewport chat interface with agent message list, auto-resizing input, and auto-scroll with "new messages" pill when scrolled up
+- `app/chat/_components/chat-interface.tsx` — orchestrates header (brand + auth state), message list, input bar, and auth modal
+- `app/chat/_components/chat-message.tsx` — discriminated union message renderer supporting `text`, `loading`, `action`, and `system` types. Agent messages left-aligned with brand avatar, user messages right-aligned with accent gradient
+- `app/chat/_components/chat-input.tsx` — auto-resizing textarea (Enter sends, Shift+Enter newline), optional file upload button (PDF only, 10 MB max), disabled state with contextual placeholder
+- `components/shared/auth-modal.tsx` — glass morphism overlay with Framer Motion enter/exit, GitHub + Google OAuth buttons, per-button loading spinners, error display, closes on backdrop click / Escape / successful auth
+- `lib/supabase-auth.ts` — Supabase auth helper (`signInWithProvider`, `signOut`, `getSession`, `getUser`, `getAccessToken`, `onAuthStateChange`)
+- `lib/auth-context.tsx` — `AuthProvider` React context + `useAuth()` hook exposing `user`, `isAuthenticated`, `isLoading`, `signIn`, `signOut`
+- `server/cred-service/app/auth.py` — JWKS/ES256 JWT validation with `PyJWKClient`, lazy initialization, hourly key refresh, dual algorithm support (ES256 primary, HS256 fallback), `get_current_user` and `get_optional_user` FastAPI dependencies, 503 on JWKS fetch failure
+- Sign-out button in chat header — clears local session and reverts UI to unauthenticated state
+- Typing indicator animation (`typing-bounce` keyframes + staggered delay utilities) in `globals.css`
+
+### Changed
+- All CTAs across the app now link to `/chat` instead of `/try` — updated in `hero.tsx`, `footer.tsx`, `about-cta.tsx`, and `app/report/Burhanuddin/page.tsx`
+- `/try` route retained for recruiter pipeline (not deleted)
+- `server/cred-service/app/config.py` — added `supabase_project_ref` field and `get_supabase_jwks_url()` method
+- `ARCHITECTURE.md` — added `/chat` route, chat component tree, auth files, `SUPABASE_PROJECT_REF` env var, updated limitation notes
+- `README.md` — updated user flow diagram (form → chat, auth gate, PDF in chat), updated project structure tree with chat and auth files
+- `docs/010-chat-progressive-auth/trd.md` — aligned with actual JWKS/ES256 implementation (was HS256), marked Increments 1A–1D complete, fixed env var name
+- `docs/010-chat-progressive-auth/prd.md` — added P1.R11 (sign-out requirement) with acceptance criteria
+- Fixed `NEXT_PUBLIC_SUPABASE_ANON_KEY` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` across TRD, ARCHITECTURE.md, and README.md
+
 ## [2026-03-08] — Recruiter Landing Page + Waitlist Cleanup (PRD-006)
 
 ### Added

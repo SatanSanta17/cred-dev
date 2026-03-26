@@ -62,7 +62,7 @@ export function Hero() {
             transition={{ delay: 0.4 }}
             className="flex flex-col items-center gap-4"
           >
-            <Link href="/try">
+            <Link href="/chat">
               <Button
                 size="lg"
                 className="group bg-cta-gradient text-lg px-8 py-6 h-auto"
