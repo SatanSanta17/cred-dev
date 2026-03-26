@@ -506,7 +506,7 @@ export default function BurhanuddinReportPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
-              <Link href="/try">
+              <Link href="/chat">
                 <Button
                   size="lg"
                   className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-base px-6 py-5 h-auto"

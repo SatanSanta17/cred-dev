@@ -20,13 +20,17 @@ Just verified, fact-based developer analysis.
 ## How It Works
 
 ```
-User submits form (GitHub, LeetCode, LinkedIn, Resume)
+User chats with the CredDev agent at /chat
         ↓
-Phase 1: Extraction — fetch raw data from each platform
+Share profile links (GitHub, LeetCode, LinkedIn, etc.) + optional resume
+        ↓
+Phase 1: Extraction — fetch raw data from each platform (anonymous)
+        ↓
+Sign in via GitHub or Google OAuth (progressive auth gate)
         ↓
 Phase 2: Generation — LLM analyzes raw data, produces 3 reports
         ↓
-PDF reports emailed to the candidate
+PDF reports delivered in chat
 ```
 
 ### Three Reports Generated
@@ -61,37 +65,36 @@ PDF reports emailed to the candidate
 ```
 cred-dev/
 ├── app/                              # Next.js App Router pages
-│   ├── page.tsx                      # Landing page
-│   ├── try/                          # /try — report generation flow
+│   ├── page.tsx                      # Landing page (CTA → /chat)
+│   ├── chat/                         # /chat — conversational report generation
 │   │   ├── page.tsx
-│   │   └── _components/              # Co-located route components
+│   │   └── _components/
+│   │       ├── chat-interface.tsx     # Full viewport chat container + auth
+│   │       ├── chat-message.tsx      # Message bubbles (text, loading, action, system)
+│   │       └── chat-input.tsx        # Text input + file upload
+│   ├── try/                          # /try — legacy form flow (recruiter pipeline)
+│   │   ├── page.tsx
+│   │   └── _components/
 │   │       ├── try-flow.tsx          # State machine: form → extract → generate → success
 │   │       ├── try-form.tsx          # Input form (5 fields + resume upload)
 │   │       └── generation-loader.tsx # Animated progress display
 │   ├── recruiters/                   # /recruiters — "coming soon" recruiter page
-│   │   ├── page.tsx
-│   │   └── _components/              # Co-located route components
 │   ├── about/                        # /about — team + origin story
 │   ├── report/                       # Static sample report pages
-│   └── layout.tsx
+│   └── layout.tsx                    # Root layout — AuthProvider wraps app
 ├── components/
-│   ├── sections/                     # Landing page sections
-│   │   ├── hero.tsx                  # Developer-focused hero with branding
-│   │   ├── how-it-works.tsx          # 3-step process
-│   │   ├── problem-validation.tsx    # Rotating pain point quotes
-│   │   └── footer.tsx               # CTA + copyright
 │   ├── shared/                       # Reusable across pages
-│   │   ├── back-link.tsx             # Back navigation
+│   │   ├── auth-modal.tsx            # OAuth sign-in overlay (GitHub + Google)
 │   │   ├── brand.tsx                 # CredDev logo + gradient name
-│   │   ├── gradient-text.tsx
-│   │   ├── quote-card.tsx            # Single quote card
-│   │   ├── quotes-carousel.tsx       # Rotating quote carousel (desktop + mobile)
-│   │   └── waitlist-count.tsx        # Real-time waitlist counter
+│   │   ├── footer.tsx               # CTA + copyright (CTA → /chat)
+│   │   └── ...                       # back-link, gradient-text, quote-card, etc.
 │   └── ui/                           # shadcn/ui primitives
 ├── lib/                              # Frontend utilities
 │   ├── api.ts                        # Backend API client
-│   ├── use-generation-progress.ts    # SSE hook for real-time progress
+│   ├── auth-context.tsx              # AuthProvider + useAuth() hook
 │   ├── supabase.ts                   # Supabase client
+│   ├── supabase-auth.ts             # Auth helpers (signIn, signOut, getSession)
+│   ├── use-generation-progress.ts    # SSE hook for real-time progress
 │   └── utils.ts
 ├── server/cred-service/              # FastAPI backend (see server README)
 └── reports/                          # Sample analysis reports

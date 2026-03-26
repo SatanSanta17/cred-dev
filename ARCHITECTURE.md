@@ -1,6 +1,6 @@
 # CredDev Architecture
 
-> Last verified: 2026-03-24 — every file path, service, and dependency confirmed against actual code.
+> Last verified: 2026-03-27 — every file path, service, and dependency confirmed against actual code.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### What CredDev Does
 
-CredDev is a developer credibility verification platform. A candidate submits their GitHub, LeetCode URLs, any additional profile links (Kaggle, CodeChef, Codeforces, LinkedIn, HuggingFace, etc.), and a resume. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Reports are emailed as PDFs.
+CredDev is a developer credibility verification platform. A candidate shares their GitHub, LeetCode URLs, any additional profile links (Kaggle, CodeChef, Codeforces, LinkedIn, HuggingFace, etc.), and a resume via a conversational chat interface. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Authentication is progressive: extraction is anonymous, generation requires sign-in via GitHub or Google OAuth.
 
 ### System Topology
 
@@ -39,7 +39,7 @@ CredDev is a developer credibility verification platform. A candidate submits th
 ### Data Flow — End to End
 
 ```
-User submits form (/try)
+User shares profile links via chat (/chat) or form (/try for recruiters)
        │
        ▼
 POST /api/v1/extract  (FormData: name, email, URLs, platform_urls JSON, resume PDF)
@@ -104,6 +104,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 **Framework:** Next.js 16.1.6, React 19.2.3, TypeScript, Tailwind CSS 4
 **UI Library:** shadcn/ui (Radix primitives), Framer Motion, Lucide icons
 **Forms:** react-hook-form + zod validation
+**Auth:** Supabase Auth (GitHub + Google OAuth) via `AuthProvider` context
 **State:** Supabase client-side SDK (recruiter waitlist), sonner toasts
 
 #### Page Routes
@@ -111,7 +112,8 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | Route | File | Purpose |
 |-------|------|---------|
 | `/` | `app/page.tsx` | Landing page — Hero, HowItWorks, ProblemValidation, Footer |
-| `/try` | `app/try/page.tsx` | Report generation flow — TryForm → extracting → generating → success/error |
+| `/chat` | `app/chat/page.tsx` | Chat interface — conversational report generation with progressive auth |
+| `/try` | `app/try/page.tsx` | Legacy form flow — retained for recruiter pipeline |
 | `/recruiters` | `app/recruiters/page.tsx` | Recruiter-focused "coming soon" page — hero, product vision, quotes, waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
 | `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Honest sample report page — real data from actual CredDev report (VERIFIED/UNVERIFIED skills, LeetCode stats, production signals, risk flags). PDF download available. |
@@ -124,6 +126,10 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, dynamic "Add Profile Link" section for additional URLs (auto-detects platform from domain), resume (PDF, max 10MB). Requires at least one profile URL or resume. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
+| `ChatInterface` | `app/chat/_components/chat-interface.tsx` | Full viewport chat container. Header with Brand + sign-in/sign-out. Scrollable message list with auto-scroll + "new messages" pill. Composes ChatMessage, ChatInput, AuthModal. |
+| `ChatMessage` | `app/chat/_components/chat-message.tsx` | Message bubble. Agent left-aligned with Brand avatar + `glass-card-light`. User right-aligned with `bg-cta-gradient`. Supports types: text, loading (typing dots), action (buttons), system (centered/muted). Exports `Message`, `MessageType`, `MessageRole` types. |
+| `ChatInput` | `app/chat/_components/chat-input.tsx` | Auto-resizing textarea. Enter sends, Shift+Enter newline. Disabled state with contextual placeholder. Optional file upload (PDF, 10MB max). |
+| `AuthModal` | `components/shared/auth-modal.tsx` | OAuth sign-in overlay. GitHub + Google buttons. Glass morphism card with Framer Motion enter/exit. Closes on backdrop click, Escape key, or successful auth. |
 | `RecruiterWaitlistForm` | `app/recruiters/_components/recruiter-waitlist-form.tsx` | Recruiter-only waitlist form. Inserts into Supabase `waitlist` table with `user_type: 'recruiter'`. |
 | `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. Used on recruiter page only. |
 
@@ -360,6 +366,7 @@ Every `logger.error()` call includes `exc_info=True` for full stack traces. Pipe
 | `SMTP_PORT` | No | Default: 587 |
 | `SMTP_USER` | No | SMTP username |
 | `SMTP_PASSWORD` | No | SMTP password / app password |
+| `SUPABASE_PROJECT_REF` | No | Supabase project ref for JWKS URL (auto-derived from `CRED_SERVICE_SUPABASE_URL` if not set) |
 | `CORS_ORIGINS` | No | Default: ["http://localhost:3000", "https://cred-dev17.vercel.app"] |
 | `DEBUG` | No | Default: false |
 
@@ -374,10 +381,16 @@ cred-dev/
 │   ├── page.tsx                  # Landing page — thin composition shell
 │   ├── globals.css               # Tailwind styles + CredDev design tokens & utility classes
 │   ├── _components/              # Landing page sections (co-located)
-│   │   ├── hero.tsx              # Developer-focused hero with Brand
+│   │   ├── hero.tsx              # Developer-focused hero with Brand (CTA → /chat)
 │   │   ├── how-it-works.tsx      # Compact 3-step process
 │   │   └── problem-validation.tsx # Rotating quotes from real conversations
-│   ├── try/                      # /try — report generation flow
+│   ├── chat/                     # /chat — conversational report generation
+│   │   ├── page.tsx              # Thin shell — metadata + ChatInterface
+│   │   └── _components/          # Route-specific (co-located)
+│   │       ├── chat-interface.tsx # Full viewport container, header, message list, auto-scroll
+│   │       ├── chat-message.tsx  # Message bubble (text, loading, action, system types)
+│   │       └── chat-input.tsx    # Text input + file upload (Enter/Shift+Enter)
+│   ├── try/                      # /try — legacy form flow (retained for recruiter pipeline)
 │   │   ├── page.tsx
 │   │   └── _components/          # Route-specific (co-located)
 │   │       ├── try-flow.tsx      # Core: form → extract → generate → result
@@ -406,9 +419,10 @@ cred-dev/
 │       └── Burhanuddin/page.tsx  # Real data sample report
 ├── components/
 │   ├── shared/                   # Reusable components (used across 2+ routes)
+│   │   ├── auth-modal.tsx        # OAuth sign-in overlay (GitHub + Google)
 │   │   ├── back-link.tsx         # Back navigation (used on /try, /report, /recruiters)
 │   │   ├── brand.tsx             # CredDev logo icon + gradient name
-│   │   ├── footer.tsx            # Condensed CTA + copyright (used on /, /recruiters)
+│   │   ├── footer.tsx            # Condensed CTA + copyright (CTA → /chat)
 │   │   ├── gradient-text.tsx     # Brand gradient text utility (used across 4+ routes)
 │   │   ├── quote-card.tsx        # Single quote card (used by QuotesCarousel)
 │   │   ├── quotes-carousel.tsx   # Rotating quote carousel — desktop 3-col, mobile 1-card
@@ -424,7 +438,9 @@ cred-dev/
 │       └── textarea.tsx
 ├── lib/
 │   ├── api.ts                    # Backend API client (fetch-based)
-│   ├── supabase.ts               # Supabase client (waitlist only)
+│   ├── auth-context.tsx          # AuthProvider + useAuth() hook (wraps app in layout.tsx)
+│   ├── supabase.ts               # Supabase client
+│   ├── supabase-auth.ts          # Auth helpers (signIn, signOut, getSession, getAccessToken)
 │   ├── use-generation-progress.ts # SSE hook with fallback messages
 │   └── utils.ts                  # cn() utility for Tailwind
 ├── public/                       # Static assets
@@ -436,7 +452,8 @@ cred-dev/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py               # FastAPI app, CORS, logging setup, request middleware, health check
-│   │   ├── config.py             # Pydantic Settings — all env vars
+│   │   ├── auth.py               # JWT validation via JWKS (ES256) — get_current_user, get_optional_user
+│   │   ├── config.py             # Pydantic Settings — all env vars + JWKS URL derivation
 │   │   ├── logging_config.py     # Centralized logging — JSON (prod) / readable (dev)
 │   │   ├── database.py           # SQLAlchemy models: AnalysisJob, RawData, Report
 │   │   └── routes/
@@ -477,7 +494,7 @@ cred-dev/
 1. **WebSearchFetcher depends on OpenAI web search** — quality varies by platform. Some profiles may return partial data if the page requires login.
 2. **Resume URL field unused** — `resume_url` column exists but resume is always sent as bytes in the request body. No Supabase Storage integration yet.
 3. **ProgressManager is in-memory** — lost on server restart. Works fine for single-instance Render but won't scale to multiple workers.
-4. **No authentication** — anyone can submit. `user_id` column exists but isn't populated.
+4. **Auth infrastructure built, not yet enforced** — Supabase Auth (GitHub + Google OAuth) is wired up with JWKS-based JWT validation. `get_current_user` / `get_optional_user` dependencies exist but are not yet applied to generation endpoints. `user_id` column still not populated (Part 2 work).
 5. **helpers.py is unused** — ExtractionService has its own URL extraction methods inline.
 6. **About page values section** — commented out with placeholder descriptions.
 7. **Render cold starts** — free tier spins down after inactivity, first request takes 30-50 seconds.

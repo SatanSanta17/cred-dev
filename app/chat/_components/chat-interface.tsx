@@ -45,7 +45,7 @@ export function ChatInterface() {
   const [isAgentTyping, setIsAgentTyping] = useState(false)
 
   /* ----- Auth modal state --------------------------------------------- */
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   const openAuthModal = useCallback(() => setIsAuthModalOpen(true), [])
   const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), [])
