@@ -13,7 +13,7 @@
 | Auth provider | Supabase Auth | Already in the stack for waitlist. Built-in OAuth, JWT, session management. Free tier covers this. No new infrastructure. |
 | OAuth methods | GitHub + Google | Developer audience uses GitHub. Google covers everyone else. Two providers, maximum coverage, minimum complexity. |
 | Auth state (frontend) | Supabase JS SDK + React context | SDK handles tokens, refresh, persistence. Context exposes state to all components per CLAUDE.md auth conventions. |
-| Auth validation (backend) | PyJWT + Supabase JWT secret | Validate `Authorization: Bearer <token>` on FastAPI with a reusable `Depends()` function. Single dependency, no new auth server. |
+| Auth validation (backend) | PyJWT + JWKS (ES256) | Asymmetric JWT validation via Supabase's JWKS endpoint. `PyJWKClient` fetches and caches the public signing key — the backend can only *verify* tokens, never forge them. Lazy initialization + hourly refresh handles key rotation. Dual algorithm support (ES256 primary, HS256 fallback). Single `Depends()` function, no new auth server. |
 | Chat state machine | Client-side TypeScript | Deterministic in Phase 1 — no LLM needed. Runs entirely in the browser. Discriminated union type for states per CLAUDE.md TypeScript patterns. |
 | Chat UI | Co-located route components | Private to the chat route. Follows existing `_components/` co-location pattern. |
 | PDF delivery | Backend-generated PDFs served via API | Existing `generate_report_pdf()` in email service already creates PDFs. New endpoint serves them as downloadable files. |
@@ -36,9 +36,9 @@
 
 | Variable | Where | Purpose |
 |----------|-------|---------|
-| `SUPABASE_JWT_SECRET` | Backend `.env` | Validates Supabase Auth JWTs on protected endpoints. Found in Supabase Dashboard → Project Settings → API → JWT Secret. |
+| `SUPABASE_PROJECT_REF` | Backend `.env` (optional) | Supabase project reference ID, used to construct the JWKS endpoint URL (`https://{ref}.supabase.co/auth/v1/jwks`). If not set, derived automatically from `CRED_SERVICE_SUPABASE_URL`. Found in Supabase Dashboard → Project Settings → General. |
 
-Frontend uses existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` — no new frontend env vars.
+Frontend uses existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — no new frontend env vars. No `SUPABASE_JWT_SECRET` needed — the backend uses asymmetric JWKS validation (public key only), not symmetric HS256.
 
 ---
 
@@ -46,23 +46,24 @@ Frontend uses existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON
 
 ### Frontend — Auth Module
 
-**New file: `lib/supabase-auth.ts`**
+**New file: `lib/supabase-auth.ts`** ✅ Implemented
 Auth helper wrapping the existing Supabase JS SDK client (`lib/supabase.ts`):
-- `signInWithGitHub()` — `supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } })`
-- `signInWithGoogle()` — `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })`
+- `signInWithProvider(provider: OAuthProvider, redirectTo?)` — generic OAuth trigger for any provider (`'github' | 'google'`). Defaults redirect to `/chat`.
 - `signOut()` — `supabase.auth.signOut()`
-- `getSession()` — returns current session or null
-- `getUser()` — returns current user or null
-- `onAuthStateChange(callback)` — subscribes to auth events (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+- `getSession()` — returns current `Session` or null
+- `getUser()` — returns current `User` or null (swallows auth errors for unauthenticated state)
+- `getAccessToken()` — convenience wrapper, returns `session.access_token` or null
+- `onAuthStateChange(callback)` — subscribes to auth events, returns unsubscribe function for cleanup
 
-**New file: `lib/auth-context.tsx`**
+**New file: `lib/auth-context.tsx`** ✅ Implemented
 `'use client'` React context provider:
 - State: `user: User | null`, `session: Session | null`, `isAuthenticated: boolean`, `isLoading: boolean`
-- Actions: `signIn(provider: 'github' | 'google')`, `signOut()`
-- On mount: calls `getSession()` to restore existing session
+- Actions: `signIn(provider: OAuthProvider)`, `signOut()`
+- On mount: calls `getSession()` to restore existing session with mounted-flag guard to prevent state updates after unmount
 - Subscribes to `onAuthStateChange` to keep state in sync across tabs
-- Wraps the app in `app/layout.tsx`
-- Exported: `AuthProvider` component + `useAuth()` hook
+- Uses `useCallback` for stable `signIn`/`signOut` references
+- Wraps the app in `app/layout.tsx` (wired in layout)
+- Exported: `AuthProvider` component + `useAuth()` hook (throws if used outside provider)
 
 **New file: `components/shared/auth-modal.tsx`**
 `'use client'` modal component:
@@ -121,38 +122,46 @@ Text input + send button + file upload:
 
 ### Backend — Auth Dependency
 
-**New file: `app/auth.py`**
+**New file: `app/auth.py`** ✅ Implemented
+JWKS-based asymmetric JWT validation (ES256 primary, HS256 fallback):
 ```python
 import jwt
+from jwt import PyJWKClient
 from fastapi import Header, HTTPException
+import httpx
+
+# JWKS client — lazy init, hourly refresh for key rotation
+_jwks_client: PyJWKClient | None = None
+_JWKS_REFRESH_INTERVAL = 3600
+
+def _get_jwks_client() -> PyJWKClient:
+    """Return cached PyJWKClient, refreshing periodically."""
+    # Lazy init on first request — avoids startup failures if network unavailable
+    # Re-creates client every hour to pick up key rotations
+    ...
 
 async def get_current_user(authorization: str = Header(None)) -> dict:
-    """FastAPI dependency — validates Supabase JWT, returns user dict."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    """Validate Supabase JWT via JWKS public key. Returns {id, email, role}."""
+    # 1. Extract Bearer token
+    # 2. Fetch signing key from JWKS endpoint (cached)
+    # 3. Decode with ES256/HS256, audience="authenticated"
+    # 4. Return user dict
+    # Error handling:
+    #   - RuntimeError (config) → 500
+    #   - ExpiredSignatureError → 401
+    #   - InvalidTokenError → 401 (logged with exc_info)
+    #   - httpx.HTTPError (JWKS fetch) → 503 "Auth service temporarily unavailable"
 
-    token = authorization.split(" ", 1)[1]
-    try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-        return {
-            "id": payload.get("sub"),
-            "email": payload.get("email"),
-            "role": payload.get("role"),
-        }
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError as e:
-        logger.error(f"JWT validation failed: {e}", exc_info=True)
-        raise HTTPException(status_code=401, detail="Invalid token")
+async def get_optional_user(authorization: str = Header(None)) -> dict | None:
+    """Return user dict if valid token present, None otherwise.
+    Use for endpoints that work both authenticated and anonymous
+    (e.g., extraction — anonymous allowed, but attach user_id if available)."""
+    # Delegates to get_current_user, swallows HTTPException → returns None
 ```
 
-**Modified: `app/config.py`**
-Add field: `supabase_jwt_secret: Optional[str] = None`
+**Modified: `app/config.py`** ✅ Implemented
+- Added field: `supabase_project_ref: Optional[str] = None`
+- Added method: `get_supabase_jwks_url() -> str` — constructs `https://{ref}.supabase.co/auth/v1/jwks`. Falls back to deriving project ref from `cred_service_supabase_url` if `supabase_project_ref` is not set directly.
 
 **Modified: `lib/api.ts`**
 - Import `getSession` from `supabase-auth`
@@ -179,14 +188,13 @@ Add field: `supabase_jwt_secret: Optional[str] = None`
 
 ### Implementation Increments (Part 1)
 
-**Increment 1A: Auth infrastructure (no UI)**
-- Create `lib/supabase-auth.ts`
-- Create `lib/auth-context.tsx`
-- Wire `AuthProvider` into `app/layout.tsx`
-- Create `app/auth.py` backend dependency
-- Add `supabase_jwt_secret` to `app/config.py`
-- Add `PyJWT` to `requirements.txt`
-- Verify: temporary test page triggers OAuth, logs token, backend validates it
+**Increment 1A: Auth infrastructure (no UI)** ✅ Complete
+- ✅ Create `lib/supabase-auth.ts` — generic `signInWithProvider()` + `getAccessToken()` helper
+- ✅ Create `lib/auth-context.tsx` — `AuthProvider` + `useAuth()` hook with mounted guard
+- ✅ Wire `AuthProvider` into `app/layout.tsx`
+- ✅ Create `app/auth.py` — JWKS-based ES256 validation (more robust than originally planned HS256)
+- ✅ Add `supabase_project_ref` + `get_supabase_jwks_url()` to `app/config.py`
+- ✅ Add `PyJWT[crypto]>=2.8` to `requirements.txt`
 
 **Increment 1B: Chat UI shell (visual only)**
 - Create `app/chat/page.tsx`
@@ -206,7 +214,7 @@ Add field: `supabase_jwt_secret: Optional[str] = None`
 **Increment 1D: Landing page migration + /try removal**
 - Update hero CTA link → `/chat`
 - Update footer CTA link → `/chat`
-- Delete `app/try/` directory (page.tsx, try-flow.tsx, try-form.tsx, generation-loader.tsx)
+- **Keep** `app/try/` directory — reused for the recruiter flow. Do NOT delete.
 - Keep `lib/use-generation-progress.ts` (reused by chat)
 - Update `ARCHITECTURE.md`: new routes, file structure, auth section
 - Update `README.md`: new user flow
@@ -497,7 +505,7 @@ Applied as a check inside `POST /api/v1/extract` when no auth token is present. 
 
 | Package | Where | Purpose |
 |---------|-------|---------|
-| `PyJWT` | Backend `requirements.txt` | Decode and validate Supabase Auth JWTs |
+| `PyJWT[crypto]>=2.8` | Backend `requirements.txt` | Decode and validate Supabase Auth JWTs. The `[crypto]` extra provides `cryptography` for asymmetric ES256 key support (required by JWKS validation). |
 
 Frontend: No new packages. `@supabase/supabase-js` is already installed.
 
@@ -534,10 +542,10 @@ Frontend: No new packages. `@supabase/supabase-js` is already installed.
 | `ARCHITECTURE.md` | Add chat route, auth system, new endpoints, updated file structure |
 | `README.md` | Update user flow description |
 
-### Deleted Files
-| File | Reason |
-|------|--------|
-| `app/try/page.tsx` | Replaced by chat interface |
-| `app/try/_components/try-flow.tsx` | Replaced by chat agent state machine |
-| `app/try/_components/try-form.tsx` | Replaced by chat input |
-| `app/try/_components/generation-loader.tsx` | Replaced by ephemeral chat progress |
+### Retained Files (originally planned for deletion)
+| File | Reason for Keeping |
+|------|-------------------|
+| `app/try/page.tsx` | Reused for recruiter flow |
+| `app/try/_components/try-flow.tsx` | Reused for recruiter flow |
+| `app/try/_components/try-form.tsx` | Reused for recruiter flow |
+| `app/try/_components/generation-loader.tsx` | Reused for recruiter flow |

@@ -146,7 +146,7 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 |----------|---------|
 | `NEXT_PUBLIC_CRED_SERVICE_API_URL` | Backend API base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
 
 #### Design Tokens & Utility Classes
 

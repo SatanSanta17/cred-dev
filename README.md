@@ -112,7 +112,7 @@ npm run dev
 **Environment variables** (`.env.local`):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 NEXT_PUBLIC_CRED_SERVICE_API_URL=http://localhost:8000   # backend URL
 ```
 
