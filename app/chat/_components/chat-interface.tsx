@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, LogIn, LogOut } from 'lucide-react'
 import { Brand } from '@/components/shared/brand'
+import { AuthModal } from '@/components/shared/auth-modal'
 import { useAuth } from '@/lib/auth-context'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
@@ -37,11 +38,17 @@ function generateId(): string {
 /* ------------------------------------------------------------------ */
 
 export function ChatInterface() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, signOut } = useAuth()
 
   /* ----- Message state ------------------------------------------------ */
   const [messages, setMessages] = useState<Message[]>([GREETING_MESSAGE])
   const [isAgentTyping, setIsAgentTyping] = useState(false)
+
+  /* ----- Auth modal state --------------------------------------------- */
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(true)
+
+  const openAuthModal = useCallback(() => setIsAuthModalOpen(true), [])
+  const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), [])
 
   /* ----- Scroll state ------------------------------------------------- */
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -118,18 +125,32 @@ export function ChatInterface() {
         <Brand size="sm" />
 
         {isAuthenticated && user ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-[var(--text-body)] hidden sm:inline">
               {user.user_metadata?.full_name ?? user.email}
             </span>
             <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-sm font-medium text-purple-400">
               {(user.user_metadata?.full_name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}
             </div>
+            <button
+              type="button"
+              onClick={signOut}
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-white/5 transition-colors"
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         ) : (
-          <span className="text-sm text-[var(--text-muted)]">
-            No sign-in required to start
-          </span>
+          <button
+            type="button"
+            onClick={openAuthModal}
+            className="flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-purple-400 transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            Sign in
+          </button>
         )}
       </header>
 
@@ -193,6 +214,13 @@ export function ChatInterface() {
             : 'Share your GitHub, LeetCode, or other profile links...'
         }
         showFileUpload={false}
+      />
+
+      {/* Auth modal — overlay, never a redirect */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        onSuccess={closeAuthModal}
       />
     </div>
   )

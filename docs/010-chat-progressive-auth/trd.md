@@ -211,14 +211,15 @@ async def get_optional_user(authorization: str = Header(None)) -> dict | None:
 - Test OAuth flow from within the chat page
 - Verify: modal opens with animation, OAuth redirects correctly, modal closes on success, session persists on reload
 
-**Increment 1D: Landing page migration + /try removal**
+**Increment 1D: Landing page migration + sign-out**
 - Update hero CTA link → `/chat`
 - Update footer CTA link → `/chat`
 - **Keep** `app/try/` directory — reused for the recruiter flow. Do NOT delete.
 - Keep `lib/use-generation-progress.ts` (reused by chat)
+- Add sign-out to chat header: when authenticated, the user avatar area includes a `LogOut` icon button. Clicking calls `useAuth().signOut()`, clears the session, and the header reverts to the "Sign in" button. Conversation messages are preserved — only auth state resets.
 - Update `ARCHITECTURE.md`: new routes, file structure, auth section
 - Update `README.md`: new user flow
-- Verify: no broken links, `/try` returns 404, landing page → chat works
+- Verify: no broken links, landing page → chat works, sign-out clears session without disrupting conversation
 
 ---
 
