@@ -69,9 +69,13 @@ cred-dev/
 │   ├── chat/                         # /chat — conversational report generation
 │   │   ├── page.tsx
 │   │   └── _components/
-│   │       ├── chat-interface.tsx     # Full viewport chat container + auth
+│   │       ├── chat-interface.tsx     # Full viewport chat container + state machine wiring
 │   │       ├── chat-message.tsx      # Message bubbles (text, loading, action, system)
-│   │       └── chat-input.tsx        # Text input + file upload
+│   │       ├── chat-input.tsx        # Text input + file upload with preview badge
+│   │       ├── chat-agent.ts         # State machine (12 states, deterministic)
+│   │       ├── chat-agent-types.ts   # AgentState, CollectedData, AgentResponse
+│   │       ├── chat-agent-messages.ts # Agent message templates
+│   │       └── chat-agent-intents.ts # Intent detection (affirmative/negative/wantsMore)
 │   ├── try/                          # /try — legacy form flow (recruiter pipeline)
 │   │   ├── page.tsx
 │   │   └── _components/
@@ -92,6 +96,7 @@ cred-dev/
 ├── lib/                              # Frontend utilities
 │   ├── api.ts                        # Backend API client
 │   ├── auth-context.tsx              # AuthProvider + useAuth() hook
+│   ├── platform-utils.ts            # URL detection + platform names (mirrors backend)
 │   ├── supabase.ts                   # Supabase client
 │   ├── supabase-auth.ts             # Auth helpers (signIn, signOut, getSession)
 │   ├── use-generation-progress.ts    # SSE hook for real-time progress

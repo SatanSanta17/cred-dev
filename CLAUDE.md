@@ -40,6 +40,7 @@ Additional practices:
 - **Composition over inheritance.** Build complex components by composing simple ones. Use props and children, not deep class hierarchies.
 - **Fail explicitly.** Errors are caught, logged, and surfaced to the user — never silently swallowed unless explicitly documented in the architecture.
 - **Log everything that matters.** Every service method must log: entry with input context, exit with outcome, and errors with `exc_info=True`. Use `job_id=` in all pipeline logs so a single grep traces the full lifecycle. No silent failures — if you catch an exception, you log it before handling it. New features must ship with logging from day one.
+- **File size limits.** Files exceeding 300 lines are a code smell — check if multiple responsibilities can be split into focused modules. No file should exceed 400 lines without explicit justification. When a file grows past this threshold, split it by concern: types into a `-types` file, constants/templates into their own file, utility functions into `lib/`. The goal is every file fits on a screen and has a single reason to change.
 
 ---
 

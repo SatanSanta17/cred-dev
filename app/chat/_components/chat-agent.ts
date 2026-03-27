@@ -8,217 +8,24 @@
  */
 
 import type { Message } from './chat-message'
+import type { AgentState, CollectedData, AgentResponse } from './chat-agent-types'
+import { detectPlatformUrls, getPlatformName } from '@/lib/platform-utils'
+import { isAffirmative, isNegative, wantsMore } from './chat-agent-intents'
+import {
+  GREETINGS,
+  REDIRECTS,
+  LINK_ACKNOWLEDGMENTS,
+  CONFIRM_MESSAGES,
+  RESUME_MESSAGES,
+  EXTRACTION_MESSAGES,
+} from './chat-agent-messages'
+
+/* Re-export types so consumers can import from a single module */
+export type { AgentState, CollectedData, AgentResponse } from './chat-agent-types'
+export { getPlatformName } from '@/lib/platform-utils'
 
 /* ------------------------------------------------------------------ */
-/*  Agent State Types                                                  */
-/* ------------------------------------------------------------------ */
-
-export type AgentState =
-  | 'greeting'
-  | 'collecting_links'
-  | 'confirming_links'
-  | 'resume_prompt'
-  | 'awaiting_resume'
-  | 'extracting'
-  | 'auth_gate'
-  | 'checking_history'
-  | 'generating'
-  | 'delivering_report'
-  | 'idle'
-  | 'viewing_history'
-
-export interface CollectedData {
-  platformUrls: Record<string, string> // { github: "url", leetcode: "url", ... }
-  resumeFile: File | null
-  jobId: string | null
-}
-
-export interface AgentResponse {
-  messages: Array<Omit<Message, 'id' | 'timestamp'>>
-  nextState: AgentState
-  updatedData?: Partial<CollectedData>
-  showFileUpload?: boolean
-}
-
-/* ------------------------------------------------------------------ */
-/*  URL Detection — TypeScript port of backend platform_utils.py       */
-/* ------------------------------------------------------------------ */
-
-const DOMAIN_MAP: Record<string, string> = {
-  'github.com': 'github',
-  'leetcode.com': 'leetcode',
-  'linkedin.com': 'linkedin',
-  'kaggle.com': 'kaggle',
-  'codechef.com': 'codechef',
-  'codeforces.com': 'codeforces',
-  'huggingface.co': 'huggingface',
-  'hackerrank.com': 'hackerrank',
-  'hackerearth.com': 'hackerearth',
-  'stackoverflow.com': 'stackoverflow',
-  'medium.com': 'medium',
-  'dev.to': 'devto',
-  'behance.net': 'behance',
-  'dribbble.com': 'dribbble',
-  'npmjs.com': 'npm',
-  'pypi.org': 'pypi',
-  'gitlab.com': 'gitlab',
-  'bitbucket.org': 'bitbucket',
-}
-
-const PLATFORM_NAMES: Record<string, string> = {
-  github: 'GitHub',
-  leetcode: 'LeetCode',
-  linkedin: 'LinkedIn',
-  kaggle: 'Kaggle',
-  codechef: 'CodeChef',
-  codeforces: 'Codeforces',
-  huggingface: 'HuggingFace',
-  hackerrank: 'HackerRank',
-  hackerearth: 'HackerEarth',
-  stackoverflow: 'Stack Overflow',
-  medium: 'Medium',
-  devto: 'DEV Community',
-  behance: 'Behance',
-  dribbble: 'Dribbble',
-  npm: 'npm',
-  pypi: 'PyPI',
-  gitlab: 'GitLab',
-  bitbucket: 'Bitbucket',
-}
-
-/** Extract URLs from a text string. */
-function extractUrls(text: string): string[] {
-  const urlRegex = /https?:\/\/[^\s<>\"']+|(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,6}\b(?:[-a-zA-Z0-9@:%_+.~#?&/=]*)/gi
-  return text.match(urlRegex) ?? []
-}
-
-/** Detect platform from a single URL. Mirrors backend detect_platform(). */
-function detectPlatform(url: string): string {
-  try {
-    const withProtocol = url.includes('://') ? url : `https://${url}`
-    const parsed = new URL(withProtocol)
-    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '')
-
-    for (const [domain, platformId] of Object.entries(DOMAIN_MAP)) {
-      if (hostname === domain || hostname.endsWith(`.${domain}`)) {
-        return platformId
-      }
-    }
-
-    // Fallback: use domain name as platform id
-    return hostname.split('.')[0] || 'unknown'
-  } catch {
-    return 'unknown'
-  }
-}
-
-/** Get human-readable platform name. */
-export function getPlatformName(platformId: string): string {
-  return PLATFORM_NAMES[platformId] ?? platformId.charAt(0).toUpperCase() + platformId.slice(1)
-}
-
-/**
- * Detect all platform URLs in a text string.
- * Returns { platformId: url } for each recognized URL.
- */
-export function detectPlatformUrls(text: string): Record<string, string> {
-  const urls = extractUrls(text)
-  const detected: Record<string, string> = {}
-
-  for (const url of urls) {
-    const platform = detectPlatform(url)
-    if (platform !== 'unknown') {
-      detected[platform] = url.includes('://') ? url : `https://${url}`
-    }
-  }
-
-  return detected
-}
-
-/* ------------------------------------------------------------------ */
-/*  Agent Message Templates                                            */
-/* ------------------------------------------------------------------ */
-
-const GREETINGS = {
-  anonymous:
-    "Hey! I'm CredDev's analysis agent. I verify developer credibility by analyzing real data from GitHub, LeetCode, and other platforms.\n\nShare your profile links and I'll get started.",
-  authenticated: (name: string) =>
-    `Hey ${name}, welcome back! Share your profile links and I'll run a fresh credibility analysis for you.`,
-} as const
-
-const REDIRECTS = [
-  "Interesting! I'm built for developer credibility analysis though. Share a profile link and I'll show you what I can do.",
-  "Good question! My specialty is analyzing developer profiles. Drop your GitHub or LeetCode URL and let's get started.",
-  "I appreciate the chat! I'm most useful when analyzing developer profiles though. Got any links to share?",
-  "That's a bit outside my lane — I focus on verifying developer credibility. Paste a profile URL and I'll take it from here.",
-  "I'd love to help with that, but I'm really designed for one thing: developer profile analysis. Share a link and let's go!",
-] as const
-
-const LINK_ACKNOWLEDGMENTS = {
-  single: (platform: string) =>
-    `Got it — I found your ${platform} profile. Want to add any other platform links (LeetCode, LinkedIn, etc.), or should I proceed with this?`,
-  multiple: (platforms: string[]) =>
-    `Nice — I picked up ${platforms.join(', ')}. Want to add more links, or are these good to go?`,
-  additional: (platform: string, total: number) =>
-    `Added your ${platform} profile — that's ${total} platform${total > 1 ? 's' : ''} total. Any more, or shall I proceed?`,
-} as const
-
-const CONFIRM_MESSAGES = {
-  prompt: (platforms: string[]) =>
-    `Here's what I have:\n\n${platforms.map((p) => `• ${p}`).join('\n')}\n\nLook good? Say "yes" to continue or add more links.`,
-} as const
-
-const RESUME_MESSAGES = {
-  prompt:
-    "Before I start the analysis — would you like to upload your resume (PDF)? It helps me give a more complete picture, but it's totally optional.",
-  uploaded: "Resume received! I'll include it in the analysis. Starting extraction now...",
-  skipped: "No worries — I'll work with the profile links. Starting extraction now...",
-} as const
-
-const EXTRACTION_MESSAGES = {
-  starting: "Extracting data from your profiles. This usually takes 30–60 seconds...",
-} as const
-
-/* ------------------------------------------------------------------ */
-/*  Intent Detection                                                   */
-/* ------------------------------------------------------------------ */
-
-/** Check if user message is an affirmative response. */
-function isAffirmative(text: string): boolean {
-  const normalized = text.toLowerCase().trim()
-  const affirmatives = [
-    'yes', 'yeah', 'yep', 'yup', 'sure', 'ok', 'okay', 'go', 'go ahead',
-    'proceed', 'continue', 'do it', 'let\'s go', 'looks good', 'lgtm',
-    'correct', 'confirmed', 'confirm', 'that\'s it', 'thats it',
-    'good to go', 'start', 'run it', 'analyze', 'begin',
-  ]
-  return affirmatives.some((a) => normalized === a || normalized.startsWith(`${a} `) || normalized.startsWith(`${a},`))
-}
-
-/** Check if user message is a negative/decline response. */
-function isNegative(text: string): boolean {
-  const normalized = text.toLowerCase().trim()
-  const negatives = [
-    'no', 'nah', 'nope', 'skip', 'no thanks', 'no thank you',
-    'pass', 'don\'t', 'dont', 'not now', 'later', 'without',
-    'no resume', 'skip resume', 'without resume',
-  ]
-  return negatives.some((n) => normalized === n || normalized.startsWith(`${n} `) || normalized.startsWith(`${n},`))
-}
-
-/** Check if user wants to add more links. */
-function wantsMore(text: string): boolean {
-  const normalized = text.toLowerCase().trim()
-  const more = [
-    'add more', 'more links', 'wait', 'hold on', 'one more',
-    'also', 'and', 'change', 'edit', 'modify', 'replace',
-    'not yet', 'let me add',
-  ]
-  return more.some((m) => normalized.includes(m))
-}
-
-/* ------------------------------------------------------------------ */
-/*  State Machine — Transition Logic                                   */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 /** Track last redirect index to avoid consecutive repeats. */
@@ -233,9 +40,17 @@ function getRedirectMessage(): string {
   return REDIRECTS[index]
 }
 
-function agentMessage(content: string, type: 'text' | 'action' | 'system' = 'text', metadata?: Record<string, unknown>): Omit<Message, 'id' | 'timestamp'> {
+function agentMessage(
+  content: string,
+  type: 'text' | 'action' | 'system' = 'text',
+  metadata?: Record<string, unknown>,
+): Omit<Message, 'id' | 'timestamp'> {
   return { role: 'agent', type, content, metadata }
 }
+
+/* ------------------------------------------------------------------ */
+/*  State Machine — Transition Logic                                   */
+/* ------------------------------------------------------------------ */
 
 /**
  * Process user input and produce the agent's response + next state.
@@ -273,7 +88,6 @@ export function processUserMessage(
         }
       }
 
-      // No URLs — treat as off-topic, move to collecting_links anyway
       return {
         messages: [agentMessage(getRedirectMessage())],
         nextState: 'collecting_links',
@@ -300,10 +114,8 @@ export function processUserMessage(
         }
       }
 
-      // No URLs in this message
       const collectedPlatforms = Object.keys(collectedData.platformUrls)
 
-      // User signals done (affirmative) and has at least one link → confirm
       if (collectedPlatforms.length > 0 && isAffirmative(userText)) {
         const platformNames = collectedPlatforms.map(getPlatformName)
         return {
@@ -312,7 +124,6 @@ export function processUserMessage(
         }
       }
 
-      // No links collected yet, or user sent a non-URL non-affirmative message — redirect
       return {
         messages: [agentMessage(getRedirectMessage())],
         nextState: 'collecting_links',
@@ -324,7 +135,6 @@ export function processUserMessage(
     /* -------------------------------------------------------------- */
     case 'confirming_links': {
       if (hasUrls) {
-        // User is adding more links even during confirmation
         const merged = { ...collectedData.platformUrls, ...detectedUrls }
         const platformNames = Object.keys(merged).map(getPlatformName)
         return {
@@ -349,7 +159,6 @@ export function processUserMessage(
         }
       }
 
-      // Ambiguous — re-prompt
       const platformNames = Object.keys(collectedData.platformUrls).map(getPlatformName)
       return {
         messages: [agentMessage(CONFIRM_MESSAGES.prompt(platformNames))],
@@ -377,7 +186,6 @@ export function processUserMessage(
         }
       }
 
-      // Ambiguous — re-ask
       return {
         messages: [agentMessage("Would you like to upload a resume PDF? Just say \"yes\" to upload or \"no\" to skip.")],
         nextState: 'resume_prompt',
@@ -389,7 +197,6 @@ export function processUserMessage(
     /*  AWAITING_RESUME — waiting for file upload                       */
     /* -------------------------------------------------------------- */
     case 'awaiting_resume': {
-      // User can skip the resume upload with a text command
       if (isNegative(userText)) {
         return {
           messages: [agentMessage(RESUME_MESSAGES.skipped), agentMessage(EXTRACTION_MESSAGES.starting)],
@@ -398,7 +205,6 @@ export function processUserMessage(
         }
       }
 
-      // Any other text message — remind them about the upload
       return {
         messages: [agentMessage("I'm waiting for your resume upload. Use the paperclip icon to attach a PDF, or say \"skip\" to continue without it.")],
         nextState: 'awaiting_resume',
@@ -501,7 +307,6 @@ export function processUserMessage(
     }
 
     default: {
-      // Exhaustiveness check
       const _exhaustive: never = currentState
       return _exhaustive
     }
@@ -528,7 +333,6 @@ export function processResumeUpload(
     }
   }
 
-  // File upload in an unexpected state — ignore
   return null
 }
 

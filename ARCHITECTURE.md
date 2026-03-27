@@ -1,6 +1,6 @@
 # CredDev Architecture
 
-> Last verified: 2026-03-27 — every file path, service, and dependency confirmed against actual code.
+> Last verified: 2026-03-28 — every file path, service, and dependency confirmed against actual code.
 
 ---
 
@@ -126,9 +126,14 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, dynamic "Add Profile Link" section for additional URLs (auto-detects platform from domain), resume (PDF, max 10MB). Requires at least one profile URL or resume. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
-| `ChatInterface` | `app/chat/_components/chat-interface.tsx` | Full viewport chat container. Header with Brand + sign-in/sign-out. Scrollable message list with auto-scroll + "new messages" pill. Composes ChatMessage, ChatInput, AuthModal. |
-| `ChatMessage` | `app/chat/_components/chat-message.tsx` | Message bubble. Agent left-aligned with Brand avatar + `glass-card-light`. User right-aligned with `bg-cta-gradient`. Supports types: text, loading (typing dots), action (buttons), system (centered/muted). Exports `Message`, `MessageType`, `MessageRole` types. |
-| `ChatInput` | `app/chat/_components/chat-input.tsx` | Auto-resizing textarea. Enter sends, Shift+Enter newline. Disabled state with contextual placeholder. Optional file upload (PDF, 10MB max). |
+| `ChatInterface` | `app/chat/_components/chat-interface.tsx` | Full viewport chat container. Header with Brand + sign-in/sign-out. Scrollable message list with auto-scroll + "new messages" pill. Composes ChatMessage, ChatInput, AuthModal. Manages agent state machine via `processUserMessage()`. Tracks `agentState`, `collectedData`, and `showFileUpload`. Dynamic input placeholder based on current state. Action button clicks feed back into state machine. |
+| `ChatMessage` | `app/chat/_components/chat-message.tsx` | Message bubble. Agent left-aligned with Brand avatar + `glass-card-light`. User right-aligned with `bg-cta-gradient`. Supports types: text, loading (typing dots), action (buttons with `onAction` callback), system (centered/muted). Exports `Message`, `MessageType`, `MessageRole` types. |
+| `ChatInput` | `app/chat/_components/chat-input.tsx` | Auto-resizing textarea with auto-refocus on re-enable. Enter sends, Shift+Enter newline. Disabled state with contextual placeholder. File upload with pending file badge (preview + confirm/remove), inline error banner for validation failures (wrong type, size limit). PDF only, 10MB max. |
+| Chat Agent (state machine) | `app/chat/_components/chat-agent.ts` | Client-side deterministic state machine. 12 states: greeting → collecting_links → confirming_links → resume_prompt → awaiting_resume → extracting → auth_gate → checking_history → generating → delivering_report → idle → viewing_history. Processes user messages and returns agent responses + next state. Imports from split modules below. |
+| Chat Agent Types | `app/chat/_components/chat-agent-types.ts` | `AgentState` discriminated union, `CollectedData` interface (platformUrls, resumeFile, jobId), `AgentResponse` interface. |
+| Chat Agent Messages | `app/chat/_components/chat-agent-messages.ts` | All predefined agent message templates: greetings (anonymous/authenticated), 5 redirect variations (no consecutive repeats), link acknowledgments, confirmation prompts, resume prompts, extraction messages. |
+| Chat Agent Intents | `app/chat/_components/chat-agent-intents.ts` | Pattern-matching utilities: `isAffirmative()`, `isNegative()`, `wantsMore()` — classify user messages for state transitions. |
+| Platform Utils | `lib/platform-utils.ts` | TypeScript port of backend `platform_utils.py`. 18-platform domain map, URL detection (`detectPlatformUrls()`), human-readable names (`getPlatformName()`). Reusable app-wide. |
 | `AuthModal` | `components/shared/auth-modal.tsx` | OAuth sign-in overlay. GitHub + Google buttons. Glass morphism card with Framer Motion enter/exit. Closes on backdrop click, Escape key, or successful auth. |
 | `RecruiterWaitlistForm` | `app/recruiters/_components/recruiter-waitlist-form.tsx` | Recruiter-only waitlist form. Inserts into Supabase `waitlist` table with `user_type: 'recruiter'`. |
 | `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. Used on recruiter page only. |
@@ -387,9 +392,13 @@ cred-dev/
 │   ├── chat/                     # /chat — conversational report generation
 │   │   ├── page.tsx              # Thin shell — metadata + ChatInterface
 │   │   └── _components/          # Route-specific (co-located)
-│   │       ├── chat-interface.tsx # Full viewport container, header, message list, auto-scroll
+│   │       ├── chat-interface.tsx # Full viewport container, state machine wiring, auto-scroll
 │   │       ├── chat-message.tsx  # Message bubble (text, loading, action, system types)
-│   │       └── chat-input.tsx    # Text input + file upload (Enter/Shift+Enter)
+│   │       ├── chat-input.tsx    # Text input + file upload with pending badge + error banner
+│   │       ├── chat-agent.ts     # State machine transitions (imports from split modules)
+│   │       ├── chat-agent-types.ts    # AgentState, CollectedData, AgentResponse
+│   │       ├── chat-agent-messages.ts # Greeting/redirect/confirmation templates
+│   │       └── chat-agent-intents.ts  # isAffirmative, isNegative, wantsMore matchers
 │   ├── try/                      # /try — legacy form flow (retained for recruiter pipeline)
 │   │   ├── page.tsx
 │   │   └── _components/          # Route-specific (co-located)
@@ -439,6 +448,7 @@ cred-dev/
 ├── lib/
 │   ├── api.ts                    # Backend API client (fetch-based)
 │   ├── auth-context.tsx          # AuthProvider + useAuth() hook (wraps app in layout.tsx)
+│   ├── platform-utils.ts         # URL detection + platform names (TS port of backend platform_utils.py)
 │   ├── supabase.ts               # Supabase client
 │   ├── supabase-auth.ts          # Auth helpers (signIn, signOut, getSession, getAccessToken)
 │   ├── use-generation-progress.ts # SSE hook with fallback messages
@@ -494,7 +504,7 @@ cred-dev/
 1. **WebSearchFetcher depends on OpenAI web search** — quality varies by platform. Some profiles may return partial data if the page requires login.
 2. **Resume URL field unused** — `resume_url` column exists but resume is always sent as bytes in the request body. No Supabase Storage integration yet.
 3. **ProgressManager is in-memory** — lost on server restart. Works fine for single-instance Render but won't scale to multiple workers.
-4. **Auth infrastructure built, not yet enforced** — Supabase Auth (GitHub + Google OAuth) is wired up with JWKS-based JWT validation. `get_current_user` / `get_optional_user` dependencies exist but are not yet applied to generation endpoints. `user_id` column still not populated (Part 2 work).
+4. **Auth infrastructure built, generation endpoints not yet gated** — Supabase Auth (GitHub + Google OAuth) is wired up with JWKS-based JWT validation. `get_current_user` / `get_optional_user` dependencies exist but are not yet applied to generation endpoints. `user_id` column still not populated. Chat agent state machine (12 states) is wired with full link collection, confirmation, and resume upload flows. Extraction and generation pipeline integration pending (Increments 2C–2D).
 5. **helpers.py is unused** — ExtractionService has its own URL extraction methods inline.
 6. **About page values section** — commented out with placeholder descriptions.
 7. **Render cold starts** — free tier spins down after inactivity, first request takes 30-50 seconds.
