@@ -9,21 +9,20 @@ import { useAuth } from '@/lib/auth-context'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import type { Message } from './chat-message'
+import {
+  processUserMessage,
+  processResumeUpload,
+  getGreeting,
+  createInitialData,
+} from './chat-agent'
+import type { AgentState, CollectedData } from './chat-agent'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const GREETING_MESSAGE: Message = {
-  id: 'greeting',
-  role: 'agent',
-  type: 'text',
-  content:
-    "Hey! I'm CredDev's analysis agent. I verify developer credibility by analyzing real data from GitHub, LeetCode, and other platforms.\n\nShare your profile links and I'll get started.",
-  timestamp: new Date(),
-}
-
 const SCROLL_THRESHOLD = 100 // px from bottom to consider "scrolled up"
+const TYPING_DELAY_MS = 600 // delay before agent replies (feels natural)
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -33,6 +32,10 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+function createMessage(partial: Omit<Message, 'id' | 'timestamp'>): Message {
+  return { ...partial, id: generateId(), timestamp: new Date() }
+}
+
 /* ------------------------------------------------------------------ */
 /*  ChatInterface                                                     */
 /* ------------------------------------------------------------------ */
@@ -40,8 +43,22 @@ function generateId(): string {
 export function ChatInterface() {
   const { user, isAuthenticated, signOut } = useAuth()
 
+  /* ----- Agent state machine ----------------------------------------- */
+  const [agentState, setAgentState] = useState<AgentState>('greeting')
+  const [collectedData, setCollectedData] = useState<CollectedData>(createInitialData)
+  const [showFileUpload, setShowFileUpload] = useState(false)
+
   /* ----- Message state ------------------------------------------------ */
-  const [messages, setMessages] = useState<Message[]>([GREETING_MESSAGE])
+  const greetingContent = getGreeting(isAuthenticated, user?.user_metadata?.full_name)
+  const [messages, setMessages] = useState<Message[]>(() => [
+    {
+      id: 'greeting',
+      role: 'agent',
+      type: 'text',
+      content: greetingContent,
+      timestamp: new Date(),
+    },
+  ])
   const [isAgentTyping, setIsAgentTyping] = useState(false)
 
   /* ----- Auth modal state --------------------------------------------- */
@@ -76,9 +93,37 @@ export function ChatInterface() {
     setIsUserScrolledUp(false)
   }, [])
 
+  /* ----- Apply agent response ---------------------------------------- */
+  const applyAgentResponse = useCallback(
+    (response: ReturnType<typeof processUserMessage>) => {
+      const { messages: agentMessages, nextState, updatedData, showFileUpload: fileUploadState } = response
+
+      setAgentState(nextState)
+
+      if (updatedData) {
+        setCollectedData((prev) => ({ ...prev, ...updatedData }))
+      }
+
+      if (fileUploadState !== undefined) {
+        setShowFileUpload(fileUploadState)
+      }
+
+      // Add agent messages with a brief typing delay
+      setIsAgentTyping(true)
+
+      setTimeout(() => {
+        const newMessages = agentMessages.map(createMessage)
+        setMessages((prev) => [...prev, ...newMessages])
+        setIsAgentTyping(false)
+      }, TYPING_DELAY_MS)
+    },
+    [],
+  )
+
   /* ----- Send handler ------------------------------------------------- */
   const handleSend = useCallback(
     (content: string) => {
+      // Optimistic: show user message immediately
       const userMessage: Message = {
         id: generateId(),
         role: 'user',
@@ -86,36 +131,62 @@ export function ChatInterface() {
         content,
         timestamp: new Date(),
       }
-
       setMessages((prev) => [...prev, userMessage])
 
-      /*
-       * Part 1B — no agent logic yet. Show typing indicator briefly,
-       * then reply with a placeholder acknowledgment.
-       * This will be replaced by the chat-agent state machine in Part 2A.
-       */
-      setIsAgentTyping(true)
+      // Process through state machine
+      const response = processUserMessage(
+        agentState,
+        content,
+        collectedData,
+        isAuthenticated,
+        user?.user_metadata?.full_name,
+      )
 
-      setTimeout(() => {
-        const agentReply: Message = {
-          id: generateId(),
-          role: 'agent',
-          type: 'text',
-          content:
-            "I heard you! Agent logic isn't wired up yet — that's coming in Part 2. For now, I can only echo that I received your message.",
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, agentReply])
-        setIsAgentTyping(false)
-      }, 1200)
+      applyAgentResponse(response)
     },
-    [],
+    [agentState, collectedData, isAuthenticated, user, applyAgentResponse],
   )
 
-  /* ----- File upload placeholder -------------------------------------- */
-  const handleFileUpload = useCallback((_file: File) => {
-    /* Part 2B will wire this up */
-  }, [])
+  /* ----- File upload handler ------------------------------------------ */
+  const handleFileUpload = useCallback(
+    (file: File) => {
+      // Show a user message indicating the upload
+      const userMessage: Message = {
+        id: generateId(),
+        role: 'user',
+        type: 'text',
+        content: `📎 ${file.name}`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, userMessage])
+
+      const response = processResumeUpload(agentState, file)
+      if (response) {
+        applyAgentResponse(response)
+      }
+    },
+    [agentState, applyAgentResponse],
+  )
+
+  /* ----- Dynamic placeholder based on agent state --------------------- */
+  const inputPlaceholder = isAgentTyping
+    ? 'Agent is thinking...'
+    : agentState === 'greeting' || agentState === 'collecting_links'
+      ? 'Share your GitHub, LeetCode, or other profile links...'
+      : agentState === 'confirming_links'
+        ? 'Say "yes" to confirm or add more links...'
+        : agentState === 'resume_prompt'
+          ? 'Say "yes" to upload or "no" to skip...'
+          : agentState === 'awaiting_resume'
+            ? 'Upload your resume or say "skip"...'
+            : agentState === 'extracting' || agentState === 'generating'
+              ? 'Processing your data...'
+              : 'Type a message...'
+
+  /* ----- Disable input during non-interactive states ------------------ */
+  const isInputDisabled =
+    isAgentTyping ||
+    agentState === 'checking_history'
 
   /* ----- Render ------------------------------------------------------- */
   return (
@@ -207,13 +278,9 @@ export function ChatInterface() {
       <ChatInput
         onSend={handleSend}
         onFileUpload={handleFileUpload}
-        disabled={isAgentTyping}
-        placeholder={
-          isAgentTyping
-            ? 'Agent is thinking...'
-            : 'Share your GitHub, LeetCode, or other profile links...'
-        }
-        showFileUpload={false}
+        disabled={isInputDisabled}
+        placeholder={inputPlaceholder}
+        showFileUpload={showFileUpload}
       />
 
       {/* Auth modal — overlay, never a redirect */}

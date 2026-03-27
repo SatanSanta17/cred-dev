@@ -239,6 +239,7 @@ type AgentState =
   | 'awaiting_resume'
   | 'extracting'
   | 'auth_gate'
+  | 'checking_history'
   | 'generating'
   | 'delivering_report'
   | 'idle'
@@ -256,8 +257,10 @@ resume_prompt → awaiting_resume    (on: user wants to upload resume)
 resume_prompt → extracting         (on: user declines resume)
 awaiting_resume → extracting       (on: resume uploaded successfully)
 extracting → auth_gate             (on: extraction complete + user NOT authenticated)
-extracting → generating            (on: extraction complete + user IS authenticated)
-auth_gate → generating             (on: auth success)
+extracting → checking_history      (on: extraction complete + user IS authenticated)
+auth_gate → checking_history       (on: auth success)
+checking_history → generating      (on: no existing report found, OR user confirms "generate new")
+checking_history → delivering_report (on: existing report found + user chooses "view existing")
 generating → delivering_report     (on: generation complete)
 delivering_report → idle           (on: PDF cards rendered)
 idle → collecting_links            (on: user wants a new report)
@@ -467,12 +470,14 @@ Applied as a check inside `POST /api/v1/extract` when no auth token is present. 
 
 **Increment 2D: Auth gate + generation pipeline + PDF delivery**
 - Auth modal triggers post-extraction for unauthenticated users
-- On auth success: attach token to API client, call generation endpoint with user_id
+- On auth success: transition to `checking_history` — call `GET /api/v1/user/reports` and compare platform URLs against the just-extracted links
+- If existing report found with matching URLs: agent prompts "I found a report for this profile from {date}. Want to view that one or generate a fresh analysis?" — user picks "view existing" (→ `delivering_report`) or "generate new" (→ `generating`)
+- If no match: proceed directly to `generating`
 - SSE progress from `useGenerationProgress` feeds ephemeral loading messages
 - On completion: create PDF download endpoint, render 3 report cards
 - Create `report-card.tsx` component
 - `user_id` populated on the job
-- Verify: full end-to-end flow works, PDF downloads work, user_id in database
+- Verify: full end-to-end flow works, PDF downloads work, user_id in database, duplicate detection works for same-URL reports
 
 **Increment 2E: Report history + returning users**
 - Create `GET /api/v1/user/reports` endpoint
