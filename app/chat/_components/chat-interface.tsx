@@ -147,6 +147,15 @@ export function ChatInterface() {
     [agentState, collectedData, isAuthenticated, user, applyAgentResponse],
   )
 
+  /* ----- Action button handler (from action-type messages) ------------- */
+  const handleAction = useCallback(
+    (value: string) => {
+      // Action buttons behave like the user typed the value
+      handleSend(value)
+    },
+    [handleSend],
+  )
+
   /* ----- File upload handler ------------------------------------------ */
   const handleFileUpload = useCallback(
     (file: File) => {
@@ -234,7 +243,7 @@ export function ChatInterface() {
         <div className="max-w-3xl mx-auto">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage key={msg.id} message={msg} onAction={handleAction} />
             ))}
 
             {/* Typing indicator as a transient agent message */}

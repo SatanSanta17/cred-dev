@@ -389,7 +389,16 @@ export function processUserMessage(
     /*  AWAITING_RESUME — waiting for file upload                       */
     /* -------------------------------------------------------------- */
     case 'awaiting_resume': {
-      // Text message while waiting for resume — remind them
+      // User can skip the resume upload with a text command
+      if (isNegative(userText)) {
+        return {
+          messages: [agentMessage(RESUME_MESSAGES.skipped), agentMessage(EXTRACTION_MESSAGES.starting)],
+          nextState: 'extracting',
+          showFileUpload: false,
+        }
+      }
+
+      // Any other text message — remind them about the upload
       return {
         messages: [agentMessage("I'm waiting for your resume upload. Use the paperclip icon to attach a PDF, or say \"skip\" to continue without it.")],
         nextState: 'awaiting_resume',

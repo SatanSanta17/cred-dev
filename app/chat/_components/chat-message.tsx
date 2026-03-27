@@ -26,10 +26,11 @@ export interface Message {
 
 interface ChatMessageProps {
   message: Message
+  onAction?: (value: string) => void
   className?: string
 }
 
-export function ChatMessage({ message, className }: ChatMessageProps) {
+export function ChatMessage({ message, onAction, className }: ChatMessageProps) {
   const isAgent = message.role === 'agent'
 
   /* System messages — centered, muted, no bubble */
@@ -78,7 +79,7 @@ export function ChatMessage({ message, className }: ChatMessageProps) {
         {message.type === 'loading' ? (
           <TypingIndicator />
         ) : message.type === 'action' ? (
-          <ActionContent content={message.content} metadata={message.metadata} />
+          <ActionContent content={message.content} metadata={message.metadata} onAction={onAction} />
         ) : (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">
             {message.content}
@@ -110,9 +111,10 @@ function TypingIndicator() {
 interface ActionContentProps {
   content: string
   metadata?: Record<string, unknown>
+  onAction?: (value: string) => void
 }
 
-function ActionContent({ content, metadata }: ActionContentProps) {
+function ActionContent({ content, metadata, onAction }: ActionContentProps) {
   const actions = (metadata?.actions ?? []) as Array<{
     label: string
     value: string
@@ -126,6 +128,7 @@ function ActionContent({ content, metadata }: ActionContentProps) {
           {actions.map((action) => (
             <button
               key={action.value}
+              onClick={() => onAction?.(action.value)}
               className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border-card)] text-[var(--text-heading)] hover:border-purple-500/50 hover:text-purple-400 transition-colors"
             >
               {action.label}
