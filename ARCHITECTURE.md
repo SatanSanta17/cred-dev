@@ -126,6 +126,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, dynamic "Add Profile Link" section for additional URLs (auto-detects platform from domain), resume (PDF, max 10MB). Requires at least one profile URL or resume. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
+| `useExtractionPolling` | `lib/use-extraction-polling.ts` | Extraction polling hook for chat flow. Submits extraction via API, polls every 3s (max 40), reports progress via callbacks (`onProgress`, `onComplete`, `onError`). Cycling stage messages for pending/extracting phases. Guards against double-completion. Returns `{ jobId, reset }` for retry support. |
 | `ChatInterface` | `app/chat/_components/chat-interface.tsx` | Full viewport chat container. Header with Brand + sign-in/sign-out. Scrollable message list with auto-scroll + "new messages" pill. Composes ChatMessage, ChatInput, AuthModal. Manages agent state machine via `processUserMessage()`. Tracks `agentState`, `collectedData`, and `showFileUpload`. Dynamic input placeholder based on current state. Action button clicks feed back into state machine. |
 | `ChatMessage` | `app/chat/_components/chat-message.tsx` | Message bubble. Agent left-aligned with Brand avatar + `glass-card-light`. User right-aligned with `bg-cta-gradient`. Supports types: text, loading (typing dots), action (buttons with `onAction` callback), system (centered/muted). Exports `Message`, `MessageType`, `MessageRole` types. |
 | `ChatInput` | `app/chat/_components/chat-input.tsx` | Auto-resizing textarea with auto-refocus on re-enable. Enter sends, Shift+Enter newline. Disabled state with contextual placeholder. File upload with pending file badge (preview + confirm/remove), inline error banner for validation failures (wrong type, size limit). PDF only, 10MB max. |
@@ -451,6 +452,7 @@ cred-dev/
 │   ├── platform-utils.ts         # URL detection + platform names (TS port of backend platform_utils.py)
 │   ├── supabase.ts               # Supabase client
 │   ├── supabase-auth.ts          # Auth helpers (signIn, signOut, getSession, getAccessToken)
+│   ├── use-extraction-polling.ts  # Extraction polling hook for chat flow (submit + poll + callbacks)
 │   ├── use-generation-progress.ts # SSE hook with fallback messages
 │   └── utils.ts                  # cn() utility for Tailwind
 ├── public/                       # Static assets
@@ -504,7 +506,7 @@ cred-dev/
 1. **WebSearchFetcher depends on OpenAI web search** — quality varies by platform. Some profiles may return partial data if the page requires login.
 2. **Resume URL field unused** — `resume_url` column exists but resume is always sent as bytes in the request body. No Supabase Storage integration yet.
 3. **ProgressManager is in-memory** — lost on server restart. Works fine for single-instance Render but won't scale to multiple workers.
-4. **Auth infrastructure built, generation endpoints not yet gated** — Supabase Auth (GitHub + Google OAuth) is wired up with JWKS-based JWT validation. `get_current_user` / `get_optional_user` dependencies exist but are not yet applied to generation endpoints. `user_id` column still not populated. Chat agent state machine (12 states) is wired with full link collection, confirmation, and resume upload flows. Extraction and generation pipeline integration pending (Increments 2C–2D).
+4. **Auth infrastructure built, generation endpoints not yet gated** — Supabase Auth (GitHub + Google OAuth) is wired up with JWKS-based JWT validation. `get_current_user` / `get_optional_user` dependencies exist but are not yet applied to generation endpoints. `user_id` column still not populated. Chat agent state machine (12 states) is wired with full link collection, confirmation, resume upload, and extraction pipeline integration (submit → poll → ephemeral progress → completion → auth gate). Generation pipeline integration and PDF delivery pending (Increment 2D).
 5. **helpers.py is unused** — ExtractionService has its own URL extraction methods inline.
 6. **About page values section** — commented out with placeholder descriptions.
 7. **Render cold starts** — free tier spins down after inactivity, first request takes 30-50 seconds.

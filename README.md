@@ -99,6 +99,7 @@ cred-dev/
 │   ├── platform-utils.ts            # URL detection + platform names (mirrors backend)
 │   ├── supabase.ts                   # Supabase client
 │   ├── supabase-auth.ts             # Auth helpers (signIn, signOut, getSession)
+│   ├── use-extraction-polling.ts     # Extraction polling hook for chat flow
 │   ├── use-generation-progress.ts    # SSE hook for real-time progress
 │   └── utils.ts
 ├── server/cred-service/              # FastAPI backend (see server README)

@@ -6,8 +6,13 @@ import { ChevronDown, LogIn, LogOut } from 'lucide-react'
 import { Brand } from '@/components/shared/brand'
 import { AuthModal } from '@/components/shared/auth-modal'
 import { useAuth } from '@/lib/auth-context'
+import { useExtractionPolling } from '@/lib/use-extraction-polling'
+import { useGenerationProgress } from '@/lib/use-generation-progress'
+import { triggerGeneration, getUserReports } from '@/lib/api'
+import type { ExtractionProgress, ExtractionResult } from '@/lib/use-extraction-polling'
 import { ChatMessage } from './chat-message'
 import { ChatInput } from './chat-input'
+import { ReportCards } from './report-card'
 import type { Message } from './chat-message'
 import {
   processUserMessage,
@@ -23,6 +28,8 @@ import type { AgentState, CollectedData } from './chat-agent'
 
 const SCROLL_THRESHOLD = 100 // px from bottom to consider "scrolled up"
 const TYPING_DELAY_MS = 600 // delay before agent replies (feels natural)
+const EXTRACTION_LOADING_ID = 'extraction-loading' // stable ID for ephemeral message
+const GENERATION_LOADING_ID = 'generation-loading' // stable ID for generation progress
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -61,6 +68,9 @@ export function ChatInterface() {
   ])
   const [isAgentTyping, setIsAgentTyping] = useState(false)
 
+  /* ----- Report cards state ------------------------------------------ */
+  const [deliveredJobId, setDeliveredJobId] = useState<string | null>(null)
+
   /* ----- Auth modal state --------------------------------------------- */
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
@@ -72,26 +82,321 @@ export function ChatInterface() {
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
   const [isUserScrolledUp, setIsUserScrolledUp] = useState(false)
 
-  /* Track whether the user has scrolled away from the bottom */
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current
     if (!el) return
-
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
     setIsUserScrolledUp(distanceFromBottom > SCROLL_THRESHOLD)
   }, [])
 
-  /* Auto-scroll to bottom when new messages arrive (unless user scrolled up) */
   useEffect(() => {
     if (!isUserScrolledUp) {
       scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, isUserScrolledUp])
+  }, [messages, isUserScrolledUp, deliveredJobId])
 
   const scrollToBottom = useCallback(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth' })
     setIsUserScrolledUp(false)
   }, [])
+
+  /* ----- Global 401 listener ----------------------------------------- */
+  useEffect(() => {
+    function handleAuthExpired() {
+      // Token expired mid-session — open auth modal to re-authenticate
+      setIsAuthModalOpen(true)
+      setMessages((prev) => [
+        ...prev,
+        createMessage({
+          role: 'agent',
+          type: 'text',
+          content: 'Your session has expired. Please sign in again to continue.',
+        }),
+      ])
+    }
+
+    window.addEventListener('auth:expired', handleAuthExpired)
+    return () => window.removeEventListener('auth:expired', handleAuthExpired)
+  }, [])
+
+  /* ----- Generation helpers (defined first — referenced by extraction) -- */
+
+  const startGeneration = useCallback(async (jobId: string) => {
+    setAgentState('generating')
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: GENERATION_LOADING_ID,
+        role: 'agent' as const,
+        type: 'loading' as const,
+        content: 'Starting report generation...',
+        timestamp: new Date(),
+      },
+    ])
+
+    try {
+      await triggerGeneration(jobId)
+      // SSE progress hook will take over from here
+    } catch (err) {
+      // Remove loading, show error
+      setMessages((prev) => {
+        const withoutLoading = prev.filter((m) => m.id !== GENERATION_LOADING_ID)
+        return [
+          ...withoutLoading,
+          createMessage({
+            role: 'agent',
+            type: 'action',
+            content: `Report generation failed: ${err instanceof Error ? err.message : 'Something went wrong'}`,
+            metadata: {
+              actions: [
+                { label: 'Try Again', value: `generate_new:${jobId}` },
+                { label: 'Start Over', value: 'start_over' },
+              ],
+            },
+          }),
+        ]
+      })
+      setAgentState('idle')
+    }
+  }, [])
+
+  const checkHistoryAndGenerate = useCallback(async (jobId: string) => {
+    setMessages((prev) => [
+      ...prev,
+      createMessage({
+        role: 'agent',
+        type: 'text',
+        content: 'Checking for existing reports...',
+      }),
+    ])
+
+    try {
+      const history = await getUserReports(1, 10)
+
+      // Check if any existing completed report matches the same platform URLs
+      const currentUrls = collectedData.platformUrls
+      const matchingReport = history.reports.find((r) => {
+        if (r.status !== 'completed' || !r.platform_urls) return false
+        if (r.job_id === jobId) return false // don't match current job
+        const existingUrls = r.platform_urls
+        const currentKeys = Object.keys(currentUrls)
+        const existingKeys = Object.keys(existingUrls)
+        // Exact match — same platforms, same URLs
+        if (currentKeys.length !== existingKeys.length) return false
+        return currentKeys.every(
+          (platform) => existingUrls[platform] === currentUrls[platform],
+        )
+      })
+
+      if (matchingReport) {
+        // Found existing report — give user the choice
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'action',
+            content: `I found an existing report for this profile from ${matchingReport.created_at ? new Date(matchingReport.created_at).toLocaleDateString() : 'a previous session'}. Want to view that or generate a fresh analysis?`,
+            metadata: {
+              actions: [
+                { label: 'View Existing', value: `view_existing:${matchingReport.job_id}` },
+                { label: 'Generate New', value: `generate_new:${jobId}` },
+              ],
+            },
+          }),
+        ])
+        return
+      }
+    } catch {
+      // History check failed — proceed with generation (non-fatal)
+    }
+
+    // No match or history unavailable — proceed to generate
+    startGeneration(jobId)
+  }, [collectedData.platformUrls, startGeneration])
+
+  /* ----- Extraction polling ------------------------------------------ */
+
+  const handleExtractionProgress = useCallback((progress: ExtractionProgress) => {
+    // Update the ephemeral loading message content in-place
+    setMessages((prev) => {
+      const existing = prev.find((m) => m.id === EXTRACTION_LOADING_ID)
+      if (existing) {
+        return prev.map((m) =>
+          m.id === EXTRACTION_LOADING_ID
+            ? { ...m, content: progress.message }
+            : m,
+        )
+      }
+      // First progress update — add the ephemeral loading message
+      return [
+        ...prev,
+        {
+          id: EXTRACTION_LOADING_ID,
+          role: 'agent' as const,
+          type: 'loading' as const,
+          content: progress.message,
+          timestamp: new Date(),
+        },
+      ]
+    })
+  }, [])
+
+  const handleExtractionComplete = useCallback((result: ExtractionResult) => {
+    // Remove ephemeral loading message, add persistent summary
+    setMessages((prev) => {
+      const withoutLoading = prev.filter((m) => m.id !== EXTRACTION_LOADING_ID)
+      const summary = `Extraction complete! I've gathered data from ${result.platformsExtracted.join(', ')}.`
+
+      return [
+        ...withoutLoading,
+        createMessage({ role: 'agent', type: 'text', content: summary }),
+      ]
+    })
+
+    // Store jobId in collected data
+    setCollectedData((prev) => ({ ...prev, jobId: result.jobId }))
+
+    // Transition: extracting → auth_gate (if not authenticated) or checking_history
+    if (isAuthenticated) {
+      setAgentState('checking_history')
+      checkHistoryAndGenerate(result.jobId)
+    } else {
+      setAgentState('auth_gate')
+      setMessages((prev) => [
+        ...prev,
+        createMessage({
+          role: 'agent',
+          type: 'text',
+          content: 'Great — your data is ready! Sign in to generate your credibility reports.',
+        }),
+      ])
+      setIsAuthModalOpen(true)
+    }
+  }, [isAuthenticated, checkHistoryAndGenerate])
+
+  const handleExtractionError = useCallback((errorMsg: string) => {
+    // Remove ephemeral loading message, add error message with retry option
+    setMessages((prev) => {
+      const withoutLoading = prev.filter((m) => m.id !== EXTRACTION_LOADING_ID)
+      return [
+        ...withoutLoading,
+        createMessage({
+          role: 'agent',
+          type: 'action',
+          content: `Something went wrong during extraction: ${errorMsg}`,
+          metadata: {
+            actions: [
+              { label: 'Try Again', value: 'retry_extraction' },
+              { label: 'Start Over', value: 'start_over' },
+            ],
+          },
+        }),
+      ]
+    })
+
+    // Go back to collecting_links so user can retry
+    setAgentState('collecting_links')
+  }, [])
+
+  const { reset: resetExtraction } = useExtractionPolling({
+    platformUrls: collectedData.platformUrls,
+    resumeFile: collectedData.resumeFile,
+    candidateName: user?.user_metadata?.full_name ?? 'Developer',
+    candidateEmail: user?.email ?? '',
+    enabled: agentState === 'extracting',
+    onComplete: handleExtractionComplete,
+    onError: handleExtractionError,
+    onProgress: handleExtractionProgress,
+  })
+
+  /* ----- Generation SSE progress ------------------------------------- */
+
+  const { progress: genProgress, error: genError, reset: resetGeneration } = useGenerationProgress(
+    agentState === 'generating' ? collectedData.jobId : null,
+    agentState === 'generating',
+  )
+
+  // Update ephemeral generation loading message when SSE progress arrives
+  useEffect(() => {
+    if (!genProgress || agentState !== 'generating') return
+
+    if (genProgress.status === 'completed') {
+      // Generation done — remove loading, add success message, show report cards
+      setMessages((prev) => {
+        const withoutLoading = prev.filter((m) => m.id !== GENERATION_LOADING_ID)
+        return [
+          ...withoutLoading,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: 'Your credibility reports are ready! Download them below.',
+          }),
+        ]
+      })
+      setDeliveredJobId(collectedData.jobId)
+      setAgentState('delivering_report')
+      resetGeneration()
+      return
+    }
+
+    if (genProgress.status === 'failed') {
+      setMessages((prev) => {
+        const withoutLoading = prev.filter((m) => m.id !== GENERATION_LOADING_ID)
+        return [
+          ...withoutLoading,
+          createMessage({
+            role: 'agent',
+            type: 'action',
+            content: `Report generation failed: ${genProgress.error || 'Unknown error'}`,
+            metadata: {
+              actions: [
+                { label: 'Try Again', value: `generate_new:${collectedData.jobId}` },
+                { label: 'Start Over', value: 'start_over' },
+              ],
+            },
+          }),
+        ]
+      })
+      setAgentState('idle')
+      resetGeneration()
+      return
+    }
+
+    // In-progress — update ephemeral message content
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === GENERATION_LOADING_ID
+          ? { ...m, content: genProgress.message || 'Generating reports...' }
+          : m,
+      ),
+    )
+  }, [genProgress, agentState, collectedData.jobId, resetGeneration])
+
+  // Handle SSE connection error
+  useEffect(() => {
+    if (genError && agentState === 'generating') {
+      setMessages((prev) => {
+        const withoutLoading = prev.filter((m) => m.id !== GENERATION_LOADING_ID)
+        return [
+          ...withoutLoading,
+          createMessage({
+            role: 'agent',
+            type: 'action',
+            content: `Connection lost during generation: ${genError}`,
+            metadata: {
+              actions: [
+                { label: 'Try Again', value: `generate_new:${collectedData.jobId}` },
+                { label: 'Start Over', value: 'start_over' },
+              ],
+            },
+          }),
+        ]
+      })
+      setAgentState('idle')
+      resetGeneration()
+    }
+  }, [genError, agentState, collectedData.jobId, resetGeneration])
 
   /* ----- Apply agent response ---------------------------------------- */
   const applyAgentResponse = useCallback(
@@ -123,6 +428,57 @@ export function ChatInterface() {
   /* ----- Send handler ------------------------------------------------- */
   const handleSend = useCallback(
     (content: string) => {
+      // Handle special action values
+      if (content === 'retry_extraction') {
+        resetExtraction()
+        setAgentState('extracting')
+        setMessages((prev) => [
+          ...prev,
+          createMessage({ role: 'agent', type: 'text', content: 'Retrying extraction...' }),
+        ])
+        return
+      }
+
+      if (content === 'start_over') {
+        resetExtraction()
+        resetGeneration()
+        setCollectedData(createInitialData())
+        setDeliveredJobId(null)
+        setAgentState('greeting')
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: "No problem — let's start fresh. Share your profile links and I'll get going.",
+          }),
+        ])
+        return
+      }
+
+      // Handle "view existing" report from history check
+      if (content.startsWith('view_existing:')) {
+        const existingJobId = content.split(':')[1]
+        setDeliveredJobId(existingJobId)
+        setAgentState('delivering_report')
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: 'Here are your existing reports. Download them below.',
+          }),
+        ])
+        return
+      }
+
+      // Handle "generate new" from history check
+      if (content.startsWith('generate_new:')) {
+        const jobId = content.split(':')[1]
+        startGeneration(jobId)
+        return
+      }
+
       // Optimistic: show user message immediately
       const userMessage: Message = {
         id: generateId(),
@@ -144,13 +500,12 @@ export function ChatInterface() {
 
       applyAgentResponse(response)
     },
-    [agentState, collectedData, isAuthenticated, user, applyAgentResponse],
+    [agentState, collectedData, isAuthenticated, user, applyAgentResponse, resetExtraction, resetGeneration, startGeneration],
   )
 
   /* ----- Action button handler (from action-type messages) ------------- */
   const handleAction = useCallback(
     (value: string) => {
-      // Action buttons behave like the user typed the value
       handleSend(value)
     },
     [handleSend],
@@ -159,7 +514,6 @@ export function ChatInterface() {
   /* ----- File upload handler ------------------------------------------ */
   const handleFileUpload = useCallback(
     (file: File) => {
-      // Show a user message indicating the upload
       const userMessage: Message = {
         id: generateId(),
         role: 'user',
@@ -176,6 +530,25 @@ export function ChatInterface() {
     },
     [agentState, applyAgentResponse],
   )
+
+  /* ----- Auth success handler ----------------------------------------- */
+  const handleAuthSuccess = useCallback(() => {
+    setIsAuthModalOpen(false)
+
+    if (agentState === 'auth_gate' && collectedData.jobId) {
+      // Auth completed post-extraction — check history and generate
+      setAgentState('checking_history')
+      setMessages((prev) => [
+        ...prev,
+        createMessage({
+          role: 'agent',
+          type: 'text',
+          content: 'Signed in! Let me check your report history...',
+        }),
+      ])
+      checkHistoryAndGenerate(collectedData.jobId)
+    }
+  }, [agentState, collectedData.jobId, checkHistoryAndGenerate])
 
   /* ----- Dynamic placeholder based on agent state --------------------- */
   const inputPlaceholder = isAgentTyping
@@ -195,7 +568,9 @@ export function ChatInterface() {
   /* ----- Disable input during non-interactive states ------------------ */
   const isInputDisabled =
     isAgentTyping ||
-    agentState === 'checking_history'
+    agentState === 'extracting' ||
+    agentState === 'checking_history' ||
+    agentState === 'generating'
 
   /* ----- Render ------------------------------------------------------- */
   return (
@@ -261,6 +636,11 @@ export function ChatInterface() {
             )}
           </AnimatePresence>
 
+          {/* Report cards — rendered after delivery */}
+          {deliveredJobId && (
+            <ReportCards jobId={deliveredJobId} />
+          )}
+
           {/* Scroll anchor */}
           <div ref={scrollAnchorRef} aria-hidden="true" />
         </div>
@@ -296,7 +676,7 @@ export function ChatInterface() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={closeAuthModal}
-        onSuccess={closeAuthModal}
+        onSuccess={handleAuthSuccess}
       />
     </div>
   )
