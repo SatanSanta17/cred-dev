@@ -23,6 +23,7 @@ import time
 import httpx
 import jwt
 from jwt import PyJWKClient
+from jwt.exceptions import PyJWKClientConnectionError
 from fastapi import Header, HTTPException
 
 from app.config import settings
@@ -47,7 +48,11 @@ def _get_jwks_client() -> PyJWKClient:
         if not jwks_url:
             raise RuntimeError("Supabase JWKS URL is not configured")
 
-        _jwks_client = PyJWKClient(jwks_url)
+        # Supabase requires the `apikey` header on all endpoints, including JWKS.
+        # Without it, the endpoint returns 401 Unauthorized.
+        supabase_key = settings.get_supabase_key()
+        headers = {"apikey": supabase_key} if supabase_key else {}
+        _jwks_client = PyJWKClient(jwks_url, headers=headers)
         _jwks_client_init_time = now
         logger.info(f"JWKS client initialized from {jwks_url}")
 
@@ -87,7 +92,7 @@ async def get_current_user(authorization: str = Header(None)) -> dict:
     except jwt.InvalidTokenError as e:
         logger.error(f"JWT validation failed: {e}", exc_info=True)
         raise HTTPException(status_code=401, detail="Invalid token")
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, PyJWKClientConnectionError) as e:
         logger.error(f"Failed to fetch JWKS: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Auth service temporarily unavailable")
 
