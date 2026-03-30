@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Request
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, Dict
 import uuid
 import json
 import logging
+import time
 from datetime import datetime
 from ..database import get_db, AnalysisJob, SessionLocal
+from ..auth import get_optional_user
 from services.extraction import ExtractionService
 from services.raw_data_loader import RawDataLoader
 
@@ -13,9 +15,38 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# ---------------------------------------------------------------------------
+# Rate limiting for anonymous extractions (3 per hour per IP)
+# ---------------------------------------------------------------------------
+ANON_EXTRACTION_LIMIT = 3
+ANON_EXTRACTION_WINDOW = 3600  # 1 hour in seconds
+
+# In-memory tracker: { ip: { "count": int, "window_start": float } }
+_extraction_tracker: Dict[str, Dict] = {}
+
+
+def _check_rate_limit(ip: str) -> None:
+    """Raise 429 if anonymous IP has exceeded the extraction limit."""
+    now = time.time()
+    entry = _extraction_tracker.get(ip)
+
+    if entry is None or (now - entry["window_start"]) > ANON_EXTRACTION_WINDOW:
+        # New window
+        _extraction_tracker[ip] = {"count": 1, "window_start": now}
+        return
+
+    if entry["count"] >= ANON_EXTRACTION_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Sign in to continue analyzing profiles.",
+        )
+
+    entry["count"] += 1
+
 
 @router.post("/extract")
 async def extract_raw_data(
+    request: Request,
     background_tasks: BackgroundTasks,
     resume: Optional[UploadFile] = File(None),
     # New: flexible platform URLs as JSON string
@@ -27,6 +58,7 @@ async def extract_raw_data(
     candidate_name: Optional[str] = Form("Anonymous Candidate"),
     candidate_email: Optional[str] = Form(None),
     user_id: Optional[str] = Form(None),
+    current_user: dict | None = Depends(get_optional_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -38,6 +70,13 @@ async def extract_raw_data(
 
     If both are provided, platform_urls takes priority; legacy params fill gaps.
     """
+
+    # Rate limit anonymous requests (3/hour per IP)
+    resolved_user_id = current_user["id"] if current_user else user_id
+    if not current_user:
+        client_ip = request.client.host if request.client else "unknown"
+        _check_rate_limit(client_ip)
+        logger.info(f"Anonymous extraction from ip={client_ip}")
 
     # Build unified platform_urls dict
     urls_dict = {}
@@ -70,7 +109,7 @@ async def extract_raw_data(
         id=job_id,
         candidate_name=candidate_name,
         candidate_email=candidate_email,
-        user_id=user_id,
+        user_id=resolved_user_id,
         status="pending",
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),

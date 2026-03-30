@@ -1,6 +1,6 @@
 # CredDev Architecture
 
-> Last verified: 2026-03-24 — every file path, service, and dependency confirmed against actual code.
+> Last verified: 2026-03-30 — every file path, service, and dependency confirmed against actual code.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### What CredDev Does
 
-CredDev is a developer credibility verification platform. A candidate submits their GitHub, LeetCode URLs, any additional profile links (Kaggle, CodeChef, Codeforces, LinkedIn, HuggingFace, etc.), and a resume. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Reports are emailed as PDFs.
+CredDev is a developer credibility verification platform. A candidate shares their GitHub, LeetCode URLs, any additional profile links (Kaggle, CodeChef, Codeforces, LinkedIn, HuggingFace, etc.), and a resume via a conversational chat interface. CredDev extracts raw data from each platform, feeds it to an LLM (OpenAI GPT-5-mini with web search), and generates three credibility reports — one comprehensive, one for the developer, one for recruiters. Authentication is progressive: extraction is anonymous (rate-limited to 3/hour per IP), generation requires sign-in via GitHub or Google OAuth. Returning authenticated users get a history-aware greeting and can view/download previous reports.
 
 ### System Topology
 
@@ -39,11 +39,13 @@ CredDev is a developer credibility verification platform. A candidate submits th
 ### Data Flow — End to End
 
 ```
-User submits form (/try)
+User shares profile links via chat (/chat) or form (/try for recruiters)
        │
        ▼
 POST /api/v1/extract  (FormData: name, email, URLs, platform_urls JSON, resume PDF)
        │
+       ├── Anonymous: rate-limited (3/hour per IP, 429 on exceed)
+       ├── Authenticated: no rate limit, user_id bound to job
        ├── Creates AnalysisJob (status: "pending")
        ├── Returns job_id immediately
        └── Background task: safe_extraction()
@@ -61,8 +63,9 @@ Frontend polls GET /api/v1/extract/{job_id} every 3s (max 40 polls)
        │
        ▼ (when status = "extracted")
        │
-POST /api/v1/generate/{job_id}
+POST /api/v1/generate/{job_id}  ← Requires authentication
        │
+       ├── Binds user_id to job (persists even if generation fails)
        ├── Job status → "generating"
        ├── Initializes SSE progress tracking
        └── Background task: _run_generation_pipeline()
@@ -92,8 +95,8 @@ pending → extracting → extracted → generating → completed
    └──────────┴────────────────────────┴──→ failed
 ```
 
-Allowed transitions for generation retry: `extracted`, `failed`, `completed` → `generating`.
-The status `generating` is NOT allowed to re-trigger generation (prevents duplicates).
+Allowed transitions for generation: `extracted`, `failed` → `generating`.
+The statuses `generating` (409 — already in progress) and `completed` (409 — already done) are NOT allowed to re-trigger generation.
 
 ---
 
@@ -104,6 +107,7 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 **Framework:** Next.js 16.1.6, React 19.2.3, TypeScript, Tailwind CSS 4
 **UI Library:** shadcn/ui (Radix primitives), Framer Motion, Lucide icons
 **Forms:** react-hook-form + zod validation
+**Auth:** Supabase Auth (GitHub + Google OAuth) via `AuthProvider` context
 **State:** Supabase client-side SDK (recruiter waitlist), sonner toasts
 
 #### Page Routes
@@ -111,7 +115,8 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | Route | File | Purpose |
 |-------|------|---------|
 | `/` | `app/page.tsx` | Landing page — Hero, HowItWorks, ProblemValidation, Footer |
-| `/try` | `app/try/page.tsx` | Report generation flow — TryForm → extracting → generating → success/error |
+| `/chat` | `app/chat/page.tsx` | Chat interface — conversational report generation with progressive auth |
+| `/try` | `app/try/page.tsx` | Legacy form flow — retained for recruiter pipeline |
 | `/recruiters` | `app/recruiters/page.tsx` | Recruiter-focused "coming soon" page — hero, product vision, quotes, waitlist form |
 | `/about` | `app/about/page.tsx` | Team page (Burhanuddin, Mariya), origin story |
 | `/report/Burhanuddin` | `app/report/Burhanuddin/page.tsx` | Honest sample report page — real data from actual CredDev report (VERIFIED/UNVERIFIED skills, LeetCode stats, production signals, risk flags). PDF download available. |
@@ -124,20 +129,36 @@ The status `generating` is NOT allowed to re-trigger generation (prevents duplic
 | `TryForm` | `app/try/_components/try-form.tsx` | Input form: name, email, GitHub URL, LeetCode URL, dynamic "Add Profile Link" section for additional URLs (auto-detects platform from domain), resume (PDF, max 10MB). Requires at least one profile URL or resume. |
 | `GenerationLoader` | `app/try/_components/generation-loader.tsx` | Animated progress display — orbital animation, percentage counter, progress bar, stage messages. |
 | `useGenerationProgress` | `lib/use-generation-progress.ts` | SSE hook — connects to `/api/v1/generate/{job_id}/stream`. Includes fallback messages that cycle every 30s if SSE disconnects. |
+| `useExtractionPolling` | `lib/use-extraction-polling.ts` | Extraction polling hook for chat flow. Submits extraction via API, polls every 3s (max 40), reports progress via callbacks (`onProgress`, `onComplete`, `onError`). Cycling stage messages for pending/extracting phases. Guards against double-completion. Returns `{ jobId, reset }` for retry support. |
+| `ChatInterface` | `app/chat/_components/chat-interface.tsx` | Full viewport chat container. Header with Brand + sign-in/sign-out. Scrollable message list with auto-scroll + "new messages" pill. Composes ChatMessage, ChatInput, AuthModal, ReportCards. Manages agent state machine via `processUserMessage()`. Tracks `agentState`, `collectedData`, `showFileUpload`, and `deliveredJobId`. Orchestrates full pipeline: extraction → auth gate → history check → generation (SSE progress) → PDF delivery. Handles 429 rate limit → auth modal → retry. History-aware greeting for returning authenticated users. |
+| `ChatMessage` | `app/chat/_components/chat-message.tsx` | Message bubble. Agent left-aligned with Brand avatar + `glass-card-light`. User right-aligned with `bg-cta-gradient`. Supports types: text, loading (typing dots), action (buttons with `onAction` callback), system (centered/muted). Exports `Message`, `MessageType`, `MessageRole` types. |
+| `ChatInput` | `app/chat/_components/chat-input.tsx` | Auto-resizing textarea with auto-refocus on re-enable. Enter sends, Shift+Enter newline. Disabled state with contextual placeholder. File upload with pending file badge (preview + confirm/remove), inline error banner for validation failures (wrong type, size limit). PDF only, 10MB max. |
+| Chat Agent (state machine) | `app/chat/_components/chat-agent.ts` | Client-side deterministic state machine. 12 states: greeting → collecting_links → confirming_links → resume_prompt → awaiting_resume → extracting → auth_gate → checking_history → generating → delivering_report → idle → viewing_history. Processes user messages and returns agent responses + next state. Imports from split modules below. |
+| Chat Agent Types | `app/chat/_components/chat-agent-types.ts` | `AgentState` discriminated union, `CollectedData` interface (platformUrls, resumeFile, jobId), `AgentResponse` interface. |
+| `ReportCards` | `app/chat/_components/report-card.tsx` | Glass-morphism PDF download cards rendered after report generation completes. 3-card responsive grid (extensive, developer, recruiter) with staggered Framer Motion animations. Each card has loading/error states. Downloads via `downloadReportPdf()` with browser-triggered save. |
+| Chat Agent Messages | `app/chat/_components/chat-agent-messages.ts` | All predefined agent message templates: greetings (anonymous/authenticated/authenticatedWithHistory), 5 redirect variations (no consecutive repeats), link acknowledgments, confirmation prompts, resume prompts, extraction messages, history messages (fetching/empty/header), rate limit messages. |
+| Chat Agent Intents | `app/chat/_components/chat-agent-intents.ts` | Pattern-matching utilities: `isAffirmative()`, `isNegative()`, `wantsMore()` — classify user messages for state transitions. |
+| Platform Utils | `lib/platform-utils.ts` | TypeScript port of backend `platform_utils.py`. 18-platform domain map, URL detection (`detectPlatformUrls()`), human-readable names (`getPlatformName()`). Reusable app-wide. |
+| `AuthModal` | `components/shared/auth-modal.tsx` | OAuth sign-in overlay. GitHub + Google buttons. Glass morphism card with Framer Motion enter/exit. Closes on backdrop click, Escape key, or successful auth. |
 | `RecruiterWaitlistForm` | `app/recruiters/_components/recruiter-waitlist-form.tsx` | Recruiter-only waitlist form. Inserts into Supabase `waitlist` table with `user_type: 'recruiter'`. |
 | `WaitlistCount` | `components/shared/waitlist-count.tsx` | Real-time count via Supabase Realtime subscription + 30s polling. Used on recruiter page only. |
 
 #### API Client (`lib/api.ts`)
 
+All API calls go through `fetchWithAuth()` — a centralized wrapper that injects the Supabase access token (when available) and emits a custom `auth:expired` event on 401 responses so the auth context can trigger re-authentication globally.
+
 ```
 API_BASE = NEXT_PUBLIC_CRED_SERVICE_API_URL || 'http://localhost:8000'
 
-submitExtraction(formData)      → POST /api/v1/extract        (FormData)
+submitExtraction(formData)      → POST /api/v1/extract           (FormData, auth optional)
 getExtractionStatus(jobId)      → GET  /api/v1/extract/{id}
-triggerGeneration(jobId)        → POST /api/v1/generate/{id}
+triggerGeneration(jobId)        → POST /api/v1/generate/{id}     (auth required)
 getGenerationStatus(jobId)      → GET  /api/v1/generate/{id}
 getSSEUrl(jobId)                → builds SSE URL for EventSource
-resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
+resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email  (auth required)
+downloadReportPdf(jobId, type)  → GET  /api/v1/generate/{id}/pdf/{type}   (auth required, returns Blob)
+getReportPdfUrl(jobId, type)    → builds PDF download URL string
+getUserReports(page, perPage)   → GET  /api/v1/user/reports               (auth required)
 ```
 
 #### Frontend Environment Variables
@@ -146,7 +167,7 @@ resendEmail(jobId)              → POST /api/v1/generate/{id}/resend-email
 |----------|---------|
 | `NEXT_PUBLIC_CRED_SERVICE_API_URL` | Backend API base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
 
 #### Design Tokens & Utility Classes
 
@@ -199,15 +220,17 @@ RGB triplet tokens (e.g., `168 85 247`) support opacity composition: `rgb(var(--
 
 #### API Endpoints
 
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| POST | `/api/v1/extract` | `extract.extract_raw_data` | Accept form data (platform_urls JSON + legacy URL params) + resume, start background extraction |
-| GET | `/api/v1/extract/{job_id}` | `extract.get_extraction_status` | Poll extraction status, returns raw data when done |
-| POST | `/api/v1/generate/{job_id}` | `generate.generate_reports` | Trigger LLM report generation |
-| GET | `/api/v1/generate/{job_id}` | `generate.get_generation_status` | Poll generation status, returns reports when done |
-| GET | `/api/v1/generate/{job_id}/stream` | `stream.stream_generation_progress` | SSE endpoint for real-time progress |
-| POST | `/api/v1/generate/{job_id}/resend-email` | `generate.resend_email` | Resend report emails for a completed job |
-| GET | `/health` | `main.health_check` | Health check (used by Render) |
+| Method | Path | Handler | Auth | Purpose |
+|--------|------|---------|------|---------|
+| POST | `/api/v1/extract` | `extract.extract_raw_data` | Optional | Accept form data + resume, start extraction. Anonymous: rate-limited 3/hour per IP. Authenticated: no limit, binds user_id. |
+| GET | `/api/v1/extract/{job_id}` | `extract.get_extraction_status` | No | Poll extraction status, returns raw data when done |
+| GET | `/api/v1/user/reports` | `generate.get_user_reports` | Required | Paginated list of user's analysis jobs with report availability. **Must be registered before wildcard `{job_id}` routes.** |
+| POST | `/api/v1/generate/{job_id}` | `generate.generate_reports` | Required | Trigger LLM report generation, binds user_id to job |
+| GET | `/api/v1/generate/{job_id}` | `generate.get_generation_status` | No | Poll generation status, returns reports when done |
+| GET | `/api/v1/generate/{job_id}/stream` | `stream.stream_generation_progress` | No | SSE endpoint for real-time progress |
+| POST | `/api/v1/generate/{job_id}/resend-email` | `generate.resend_email` | Required | Resend report emails for a completed job |
+| GET | `/api/v1/generate/{job_id}/pdf/{report_type}` | `generate.download_report_pdf` | Required | Generate and serve a report PDF for download. Validates job ownership. |
+| GET | `/health` | `main.health_check` | No | Health check (used by Render) |
 
 #### Service Layer
 
@@ -241,6 +264,13 @@ async def safe_extraction():
 **Frontend poll timeout:**
 - MAX_POLLS = 40 (40 × 3s = ~2 minutes)
 - `generationTriggered` flag prevents duplicate generation API calls
+
+**Anonymous rate limiting (`extract.py`):**
+- In-memory IP tracker: `{ ip: { count, window_start } }`
+- 3 extractions per hour per IP for anonymous users
+- Authenticated users bypass rate limiting entirely
+- Returns 429 with actionable message ("Sign in to continue")
+- Frontend catches 429, surfaces auth modal with contextual message, retries extraction after successful auth
 
 **Email is non-fatal:**
 - Email failure in generation pipeline is caught and logged but doesn't fail the job
@@ -286,7 +316,7 @@ Every `logger.error()` call includes `exc_info=True` for full stack traces. Pipe
 | `id` | String (PK) | UUID generated at creation |
 | `candidate_name` | String | Default: "Anonymous Candidate" |
 | `candidate_email` | String | For email delivery |
-| `user_id` | String | Optional, for future auth |
+| `user_id` | String | Set at generation time from authenticated user's Supabase ID. Used for report history queries. |
 | `status` | String | pending → extracting → extracted → generating → completed / failed |
 | `created_at` | DateTime | |
 | `updated_at` | DateTime | |
@@ -360,6 +390,7 @@ Every `logger.error()` call includes `exc_info=True` for full stack traces. Pipe
 | `SMTP_PORT` | No | Default: 587 |
 | `SMTP_USER` | No | SMTP username |
 | `SMTP_PASSWORD` | No | SMTP password / app password |
+| `SUPABASE_PROJECT_REF` | No | Supabase project ref for JWKS URL (auto-derived from `CRED_SERVICE_SUPABASE_URL` if not set) |
 | `CORS_ORIGINS` | No | Default: ["http://localhost:3000", "https://cred-dev17.vercel.app"] |
 | `DEBUG` | No | Default: false |
 
@@ -374,10 +405,21 @@ cred-dev/
 │   ├── page.tsx                  # Landing page — thin composition shell
 │   ├── globals.css               # Tailwind styles + CredDev design tokens & utility classes
 │   ├── _components/              # Landing page sections (co-located)
-│   │   ├── hero.tsx              # Developer-focused hero with Brand
+│   │   ├── hero.tsx              # Developer-focused hero with Brand (CTA → /chat)
 │   │   ├── how-it-works.tsx      # Compact 3-step process
 │   │   └── problem-validation.tsx # Rotating quotes from real conversations
-│   ├── try/                      # /try — report generation flow
+│   ├── chat/                     # /chat — conversational report generation
+│   │   ├── page.tsx              # Thin shell — metadata + ChatInterface
+│   │   └── _components/          # Route-specific (co-located)
+│   │       ├── chat-interface.tsx # Full viewport container, state machine wiring, auto-scroll
+│   │       ├── chat-message.tsx  # Message bubble (text, loading, action, system types)
+│   │       ├── chat-input.tsx    # Text input + file upload with pending badge + error banner
+│   │       ├── chat-agent.ts     # State machine transitions (imports from split modules)
+│   │       ├── chat-agent-types.ts    # AgentState, CollectedData, AgentResponse
+│   │       ├── chat-agent-messages.ts # Greeting/redirect/confirmation/history/rate-limit templates
+│   │       ├── chat-agent-intents.ts  # isAffirmative, isNegative, wantsMore matchers
+│   │       └── report-card.tsx        # PDF download cards (3-card grid, glass morphism)
+│   ├── try/                      # /try — legacy form flow (retained for recruiter pipeline)
 │   │   ├── page.tsx
 │   │   └── _components/          # Route-specific (co-located)
 │   │       ├── try-flow.tsx      # Core: form → extract → generate → result
@@ -406,9 +448,10 @@ cred-dev/
 │       └── Burhanuddin/page.tsx  # Real data sample report
 ├── components/
 │   ├── shared/                   # Reusable components (used across 2+ routes)
+│   │   ├── auth-modal.tsx        # OAuth sign-in overlay (GitHub + Google)
 │   │   ├── back-link.tsx         # Back navigation (used on /try, /report, /recruiters)
 │   │   ├── brand.tsx             # CredDev logo icon + gradient name
-│   │   ├── footer.tsx            # Condensed CTA + copyright (used on /, /recruiters)
+│   │   ├── footer.tsx            # Condensed CTA + copyright (CTA → /chat)
 │   │   ├── gradient-text.tsx     # Brand gradient text utility (used across 4+ routes)
 │   │   ├── quote-card.tsx        # Single quote card (used by QuotesCarousel)
 │   │   ├── quotes-carousel.tsx   # Rotating quote carousel — desktop 3-col, mobile 1-card
@@ -424,7 +467,11 @@ cred-dev/
 │       └── textarea.tsx
 ├── lib/
 │   ├── api.ts                    # Backend API client (fetch-based)
-│   ├── supabase.ts               # Supabase client (waitlist only)
+│   ├── auth-context.tsx          # AuthProvider + useAuth() hook (wraps app in layout.tsx)
+│   ├── platform-utils.ts         # URL detection + platform names (TS port of backend platform_utils.py)
+│   ├── supabase.ts               # Supabase client
+│   ├── supabase-auth.ts          # Auth helpers (signIn, signOut, getSession, getAccessToken)
+│   ├── use-extraction-polling.ts  # Extraction polling hook for chat flow (submit + poll + callbacks)
 │   ├── use-generation-progress.ts # SSE hook with fallback messages
 │   └── utils.ts                  # cn() utility for Tailwind
 ├── public/                       # Static assets
@@ -436,7 +483,8 @@ cred-dev/
 │   ├── app/
 │   │   ├── __init__.py
 │   │   ├── main.py               # FastAPI app, CORS, logging setup, request middleware, health check
-│   │   ├── config.py             # Pydantic Settings — all env vars
+│   │   ├── auth.py               # JWT validation via JWKS (ES256) — get_current_user, get_optional_user
+│   │   ├── config.py             # Pydantic Settings — all env vars + JWKS URL derivation
 │   │   ├── logging_config.py     # Centralized logging — JSON (prod) / readable (dev)
 │   │   ├── database.py           # SQLAlchemy models: AnalysisJob, RawData, Report
 │   │   └── routes/
@@ -477,7 +525,7 @@ cred-dev/
 1. **WebSearchFetcher depends on OpenAI web search** — quality varies by platform. Some profiles may return partial data if the page requires login.
 2. **Resume URL field unused** — `resume_url` column exists but resume is always sent as bytes in the request body. No Supabase Storage integration yet.
 3. **ProgressManager is in-memory** — lost on server restart. Works fine for single-instance Render but won't scale to multiple workers.
-4. **No authentication** — anyone can submit. `user_id` column exists but isn't populated.
+4. **Rate limiting is in-memory** — IP-based extraction rate limiter uses a process-local dict, lost on restart. Works for single-instance Render but won't scale to multiple workers. Consider Redis or DB-backed tracking for production scale.
 5. **helpers.py is unused** — ExtractionService has its own URL extraction methods inline.
 6. **About page values section** — commented out with placeholder descriptions.
 7. **Render cold starts** — free tier spins down after inactivity, first request takes 30-50 seconds.

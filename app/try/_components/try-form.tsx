@@ -9,40 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Github, Code2, User, Mail, Sparkles, FileText, X, Plus, Link as LinkIcon } from 'lucide-react'
+import { getPlatformName, detectPlatformUrls } from '@/lib/platform-utils'
 
-// Domain-to-platform detection (mirrors backend platform_utils.py)
-const DOMAIN_MAP: Record<string, string> = {
-  'github.com': 'GitHub',
-  'leetcode.com': 'LeetCode',
-  'kaggle.com': 'Kaggle',
-  'huggingface.co': 'HuggingFace',
-  'codechef.com': 'CodeChef',
-  'codeforces.com': 'Codeforces',
-  'hackerrank.com': 'HackerRank',
-  'hackerearth.com': 'HackerEarth',
-  'linkedin.com': 'LinkedIn',
-  'stackoverflow.com': 'Stack Overflow',
-  'medium.com': 'Medium',
-  'dev.to': 'Dev.to',
-  'behance.net': 'Behance',
-  'dribbble.com': 'Dribbble',
-  'npmjs.com': 'npm',
-  'pypi.org': 'PyPI',
-  'storybook.js.org': 'Storybook',
-}
-
+/** Detect display name for a single URL. Falls back to "Profile" on invalid input. */
 function detectPlatformName(url: string): string {
-  try {
-    const hostname = new URL(url).hostname.replace('www.', '')
-    for (const [domain, name] of Object.entries(DOMAIN_MAP)) {
-      if (hostname === domain || hostname.endsWith(`.${domain}`)) return name
-    }
-    // Fallback: capitalize the domain name
-    const parts = hostname.split('.')
-    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
-  } catch {
-    return 'Profile'
-  }
+  const detected = detectPlatformUrls(url)
+  const platformId = Object.keys(detected)[0]
+  return platformId ? getPlatformName(platformId) : 'Profile'
 }
 
 const trySchema = z.object({
