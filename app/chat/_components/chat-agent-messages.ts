@@ -14,6 +14,8 @@ export const GREETINGS = {
     "Hey! I'm CredDev's analysis agent. I verify developer credibility by analyzing real data from GitHub, LeetCode, and other platforms.\n\nShare your profile links and I'll get started.",
   authenticated: (name: string) =>
     `Hey ${name}, welcome back! Share your profile links and I'll run a fresh credibility analysis for you.`,
+  authenticatedWithHistory: (name: string, reportCount: number) =>
+    `Hey ${name}, welcome back! You have ${reportCount} previous report${reportCount > 1 ? 's' : ''} on file. Say "show my reports" to view them, or share new profile links to start a fresh analysis.`,
 } as const
 
 /* ------------------------------------------------------------------ */
@@ -67,4 +69,24 @@ export const RESUME_MESSAGES = {
 
 export const EXTRACTION_MESSAGES = {
   starting: "Extracting data from your profiles. This usually takes 30–60 seconds...",
+} as const
+
+/* ------------------------------------------------------------------ */
+/*  History Messages                                                   */
+/* ------------------------------------------------------------------ */
+
+export const HISTORY_MESSAGES = {
+  fetching: "Let me pull up your report history...",
+  empty: "No previous reports found. Share your profile links to get your first analysis!",
+  header: (count: number) =>
+    `Here are your ${count} previous report${count > 1 ? 's' : ''}. You can download any of them below, or share new links to start a fresh analysis.`,
+} as const
+
+/* ------------------------------------------------------------------ */
+/*  Rate Limit Messages                                                */
+/* ------------------------------------------------------------------ */
+
+export const RATE_LIMIT_MESSAGES = {
+  exceeded:
+    "You've reached the limit for anonymous extractions (3 per hour). Sign in to continue — it's free and takes 10 seconds.",
 } as const

@@ -198,6 +198,59 @@ def _run_generation_pipeline(job_id: str):
         db.close()
 
 
+# =========================================
+# User report history — MUST be registered before /generate/{job_id}
+# because FastAPI matches routes in order and {job_id} would swallow "user".
+# =========================================
+
+@router.get("/user/reports")
+async def get_user_reports(
+    current_user: dict = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Returns paginated list of user's analysis jobs with report availability."""
+    offset = (page - 1) * per_page
+
+    jobs = (
+        db.query(AnalysisJob)
+        .filter(AnalysisJob.user_id == current_user["id"])
+        .order_by(AnalysisJob.created_at.desc())
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
+
+    total = (
+        db.query(AnalysisJob)
+        .filter(AnalysisJob.user_id == current_user["id"])
+        .count()
+    )
+
+    logger.info(f"Report history for user={current_user['id']}: {len(jobs)} jobs (page {page})")
+
+    return {
+        "reports": [
+            {
+                "job_id": job.id,
+                "candidate_name": job.candidate_name,
+                "status": job.status,
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "platform_urls": job.platform_urls,
+            }
+            for job in jobs
+        ],
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+    }
+
+
+# =========================================
+# Generation endpoints (wildcard {job_id} routes below)
+# =========================================
+
 @router.post("/generate/{job_id}")
 async def generate_reports(
     job_id: str,
@@ -413,51 +466,3 @@ async def download_report_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-# =========================================
-# User report history endpoint
-# =========================================
-
-@router.get("/user/reports")
-async def get_user_reports(
-    current_user: dict = Depends(get_current_user),
-    page: int = Query(1, ge=1),
-    per_page: int = Query(10, ge=1, le=50),
-    db: Session = Depends(get_db),
-):
-    """Returns paginated list of user's analysis jobs with report availability."""
-    offset = (page - 1) * per_page
-
-    jobs = (
-        db.query(AnalysisJob)
-        .filter(AnalysisJob.user_id == current_user["id"])
-        .order_by(AnalysisJob.created_at.desc())
-        .offset(offset)
-        .limit(per_page)
-        .all()
-    )
-
-    total = (
-        db.query(AnalysisJob)
-        .filter(AnalysisJob.user_id == current_user["id"])
-        .count()
-    )
-
-    logger.info(f"Report history for user={current_user['id']}: {len(jobs)} jobs (page {page})")
-
-    return {
-        "reports": [
-            {
-                "job_id": job.id,
-                "candidate_name": job.candidate_name,
-                "status": job.status,
-                "created_at": job.created_at.isoformat() if job.created_at else None,
-                "platform_urls": job.platform_urls,
-            }
-            for job in jobs
-        ],
-        "page": page,
-        "per_page": per_page,
-        "total": total,
-    }

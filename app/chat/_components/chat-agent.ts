@@ -272,7 +272,7 @@ export function processUserMessage(
 
       if (historyKeywords.some((k) => normalized.includes(k))) {
         return {
-          messages: [agentMessage("Let me pull up your report history...")],
+          messages: [],
           nextState: 'viewing_history',
         }
       }
@@ -337,14 +337,22 @@ export function processResumeUpload(
 }
 
 /**
- * Get the initial greeting message based on auth state.
+ * Get the initial greeting message based on auth state and report history.
  */
-export function getGreeting(isAuthenticated: boolean, userName?: string): string {
+export function getGreeting(isAuthenticated: boolean, userName?: string, reportCount?: number): string {
+  if (isAuthenticated && userName && reportCount && reportCount > 0) {
+    return GREETINGS.authenticatedWithHistory(userName, reportCount)
+  }
   if (isAuthenticated && userName) {
     return GREETINGS.authenticated(userName)
   }
   return GREETINGS.anonymous
 }
+
+/**
+ * Get the history messages.
+ */
+export { HISTORY_MESSAGES } from './chat-agent-messages'
 
 /**
  * Create initial collected data with empty values.

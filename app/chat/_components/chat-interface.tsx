@@ -19,7 +19,9 @@ import {
   processResumeUpload,
   getGreeting,
   createInitialData,
+  HISTORY_MESSAGES,
 } from './chat-agent'
+import { RATE_LIMIT_MESSAGES } from './chat-agent-messages'
 import type { AgentState, CollectedData } from './chat-agent'
 
 /* ------------------------------------------------------------------ */
@@ -117,6 +119,100 @@ export function ChatInterface() {
 
     window.addEventListener('auth:expired', handleAuthExpired)
     return () => window.removeEventListener('auth:expired', handleAuthExpired)
+  }, [])
+
+  /* ----- On-mount: history-aware greeting for returning users --------- */
+  const historyCheckedRef = useRef(false)
+
+  useEffect(() => {
+    if (!isAuthenticated || historyCheckedRef.current) return
+    historyCheckedRef.current = true
+
+    const userName = user?.user_metadata?.full_name
+
+    getUserReports(1, 1).then((res) => {
+      if (res.total > 0 && userName) {
+        // Update greeting message with history count
+        const updatedGreeting = getGreeting(true, userName, res.total)
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === 'greeting' ? { ...m, content: updatedGreeting } : m,
+          ),
+        )
+      }
+    }).catch(() => {
+      // Silent — non-fatal, greeting stays as-is
+    })
+  }, [isAuthenticated, user])
+
+  /* ----- Fetch and show report history -------------------------------- */
+
+  const fetchAndShowHistory = useCallback(async () => {
+    setAgentState('viewing_history')
+    setMessages((prev) => [
+      ...prev,
+      createMessage({
+        role: 'agent',
+        type: 'text',
+        content: HISTORY_MESSAGES.fetching,
+      }),
+    ])
+
+    try {
+      const history = await getUserReports(1, 50)
+
+      if (history.reports.length === 0) {
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: HISTORY_MESSAGES.empty,
+          }),
+        ])
+        setAgentState('idle')
+        return
+      }
+
+      // Show completed reports as downloadable cards
+      const completedReports = history.reports.filter((r) => r.status === 'completed')
+
+      if (completedReports.length === 0) {
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: 'You have reports in progress but none are complete yet. Check back soon!',
+          }),
+        ])
+        setAgentState('idle')
+        return
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        createMessage({
+          role: 'agent',
+          type: 'text',
+          content: HISTORY_MESSAGES.header(completedReports.length),
+        }),
+      ])
+
+      // Show the most recent completed report's cards
+      setDeliveredJobId(completedReports[0].job_id)
+      setAgentState('idle')
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        createMessage({
+          role: 'agent',
+          type: 'text',
+          content: 'Sorry, I couldn\'t fetch your report history right now. Try again in a moment.',
+        }),
+      ])
+      setAgentState('idle')
+    }
   }, [])
 
   /* ----- Generation helpers (defined first — referenced by extraction) -- */
@@ -276,28 +372,45 @@ export function ChatInterface() {
   }, [isAuthenticated, checkHistoryAndGenerate])
 
   const handleExtractionError = useCallback((errorMsg: string) => {
-    // Remove ephemeral loading message, add error message with retry option
-    setMessages((prev) => {
-      const withoutLoading = prev.filter((m) => m.id !== EXTRACTION_LOADING_ID)
-      return [
-        ...withoutLoading,
+    // Remove ephemeral loading message
+    setMessages((prev) => prev.filter((m) => m.id !== EXTRACTION_LOADING_ID))
+
+    // Detect rate limit (429) — surface auth modal instead of generic error
+    const isRateLimited = errorMsg.toLowerCase().includes('rate limit') || errorMsg.includes('429')
+
+    if (isRateLimited && !isAuthenticated) {
+      setMessages((prev) => [
+        ...prev,
         createMessage({
           role: 'agent',
-          type: 'action',
-          content: `Something went wrong during extraction: ${errorMsg}`,
-          metadata: {
-            actions: [
-              { label: 'Try Again', value: 'retry_extraction' },
-              { label: 'Start Over', value: 'start_over' },
-            ],
-          },
+          type: 'text',
+          content: RATE_LIMIT_MESSAGES.exceeded,
         }),
-      ]
-    })
+      ])
+      setAgentState('auth_gate')
+      setIsAuthModalOpen(true)
+      return
+    }
+
+    // Generic extraction error with retry options
+    setMessages((prev) => [
+      ...prev,
+      createMessage({
+        role: 'agent',
+        type: 'action',
+        content: `Something went wrong during extraction: ${errorMsg}`,
+        metadata: {
+          actions: [
+            { label: 'Try Again', value: 'retry_extraction' },
+            { label: 'Start Over', value: 'start_over' },
+          ],
+        },
+      }),
+    ])
 
     // Go back to collecting_links so user can retry
     setAgentState('collecting_links')
-  }, [])
+  }, [isAuthenticated])
 
   const { reset: resetExtraction } = useExtractionPolling({
     platformUrls: collectedData.platformUrls,
@@ -413,16 +526,24 @@ export function ChatInterface() {
         setShowFileUpload(fileUploadState)
       }
 
-      // Add agent messages with a brief typing delay
-      setIsAgentTyping(true)
+      // State-triggered side effects
+      if (nextState === 'viewing_history') {
+        fetchAndShowHistory()
+        return
+      }
 
-      setTimeout(() => {
-        const newMessages = agentMessages.map(createMessage)
-        setMessages((prev) => [...prev, ...newMessages])
-        setIsAgentTyping(false)
-      }, TYPING_DELAY_MS)
+      // Add agent messages with a brief typing delay
+      if (agentMessages.length > 0) {
+        setIsAgentTyping(true)
+
+        setTimeout(() => {
+          const newMessages = agentMessages.map(createMessage)
+          setMessages((prev) => [...prev, ...newMessages])
+          setIsAgentTyping(false)
+        }, TYPING_DELAY_MS)
+      }
     },
-    [],
+    [fetchAndShowHistory],
   )
 
   /* ----- Send handler ------------------------------------------------- */
@@ -500,7 +621,7 @@ export function ChatInterface() {
 
       applyAgentResponse(response)
     },
-    [agentState, collectedData, isAuthenticated, user, applyAgentResponse, resetExtraction, resetGeneration, startGeneration],
+    [agentState, collectedData, isAuthenticated, user, applyAgentResponse, resetExtraction, resetGeneration, startGeneration, fetchAndShowHistory],
   )
 
   /* ----- Action button handler (from action-type messages) ------------- */
@@ -535,20 +656,34 @@ export function ChatInterface() {
   const handleAuthSuccess = useCallback(() => {
     setIsAuthModalOpen(false)
 
-    if (agentState === 'auth_gate' && collectedData.jobId) {
-      // Auth completed post-extraction — check history and generate
-      setAgentState('checking_history')
-      setMessages((prev) => [
-        ...prev,
-        createMessage({
-          role: 'agent',
-          type: 'text',
-          content: 'Signed in! Let me check your report history...',
-        }),
-      ])
-      checkHistoryAndGenerate(collectedData.jobId)
+    if (agentState === 'auth_gate') {
+      if (collectedData.jobId) {
+        // Auth completed post-extraction — check history and generate
+        setAgentState('checking_history')
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: 'Signed in! Let me check your report history...',
+          }),
+        ])
+        checkHistoryAndGenerate(collectedData.jobId)
+      } else {
+        // Auth completed after rate limit — retry extraction
+        setMessages((prev) => [
+          ...prev,
+          createMessage({
+            role: 'agent',
+            type: 'text',
+            content: 'Signed in! Let me retry the extraction for you...',
+          }),
+        ])
+        resetExtraction()
+        setAgentState('extracting')
+      }
     }
-  }, [agentState, collectedData.jobId, checkHistoryAndGenerate])
+  }, [agentState, collectedData.jobId, checkHistoryAndGenerate, resetExtraction])
 
   /* ----- Dynamic placeholder based on agent state --------------------- */
   const inputPlaceholder = isAgentTyping
