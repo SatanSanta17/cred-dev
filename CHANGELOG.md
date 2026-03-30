@@ -1,5 +1,33 @@
 # Changelog
 
+## [2026-03-30] — Progressive Auth Pipeline + PDF Delivery — Part 2 (PRD-010, Increments 2C–2F)
+
+### Added
+- `app/chat/_components/report-card.tsx` — glass-morphism PDF download cards rendered after generation completes. 3-card responsive grid (extensive, developer, recruiter) with staggered Framer Motion animations, per-card loading/error states, browser-triggered download via `downloadReportPdf()`
+- `GET /api/v1/generate/{job_id}/pdf/{report_type}` — authenticated endpoint that generates and serves a report PDF for download. Validates job ownership via `user_id`
+- `GET /api/v1/user/reports` — authenticated, paginated endpoint returning user's analysis jobs with report availability and total count. Registered before wildcard `{job_id}` routes to prevent FastAPI route swallowing
+- `getUserReports(page, perPage)`, `downloadReportPdf(jobId, type)`, `getReportPdfUrl(jobId, type)` in `lib/api.ts`
+- Anonymous IP-based rate limiting on `POST /api/v1/extract` — 3 extractions/hour per IP, in-memory tracker, returns 429 with actionable "Sign in to continue" message
+- `fetchWithAuth()` centralized wrapper in `lib/api.ts` — injects Supabase access token on all API calls, emits `auth:expired` custom event on 401 for global re-authentication
+- History-aware greeting for returning authenticated users — `GREETINGS.authenticatedWithHistory(name, reportCount)` template
+- `HISTORY_MESSAGES` (fetching/empty/header) and `RATE_LIMIT_MESSAGES` in `chat-agent-messages.ts`
+- Report history deduplication by exact platform URL match — prevents re-generating reports the user already has
+- `idle → viewing_history` state transition with delegated fetch in `chat-interface.tsx`
+- On-mount history check with `historyCheckedRef` guard to prevent duplicate fetches
+
+### Changed
+- `POST /api/v1/generate/{job_id}` — now requires authentication (`get_current_user`), binds `user_id` to job
+- `POST /api/v1/generate/{job_id}/resend-email` — now requires authentication
+- `POST /api/v1/extract` — accepts optional auth (`get_optional_user`), authenticated users bypass rate limit and get `user_id` bound to job
+- `chat-interface.tsx` — rewritten to orchestrate full pipeline: extraction → 429 handling → auth gate → history check → generation (SSE progress with ephemeral messages) → PDF delivery via `ReportCards`. Declaration order of `useCallback` hooks is critical (TDZ-safe ordering)
+- `chat-agent.ts` — `getGreeting()` now accepts `reportCount` parameter, `idle → viewing_history` transition returns empty messages (fetch delegated to interface)
+- `lib/api.ts` — all functions now use `fetchWithAuth()` instead of raw `fetch()`
+- `analysis_jobs.user_id` — now populated at generation time from authenticated user's Supabase ID
+
+### Fixed
+- FastAPI route ordering — `GET /user/reports` registered before `{job_id}` wildcard routes to prevent "user" being matched as a job_id (was returning 404)
+- JavaScript temporal dead zone (TDZ) — `useCallback` declarations reordered so `startGeneration` and `checkHistoryAndGenerate` are defined before being referenced in dependency arrays
+
 ## [2026-03-27] — Chat Interface + Progressive Auth — Part 1 (PRD-010)
 
 ### Added

@@ -24,13 +24,15 @@ User chats with the CredDev agent at /chat
         ↓
 Share profile links (GitHub, LeetCode, LinkedIn, etc.) + optional resume
         ↓
-Phase 1: Extraction — fetch raw data from each platform (anonymous)
+Phase 1: Extraction — fetch raw data from each platform (anonymous, 3/hour rate limit)
         ↓
 Sign in via GitHub or Google OAuth (progressive auth gate)
         ↓
+History check — returning users see previous reports (dedup by platform URLs)
+        ↓
 Phase 2: Generation — LLM analyzes raw data, produces 3 reports
         ↓
-PDF reports delivered in chat
+PDF reports delivered in chat (download cards)
 ```
 
 ### Three Reports Generated
@@ -75,7 +77,8 @@ cred-dev/
 │   │       ├── chat-agent.ts         # State machine (12 states, deterministic)
 │   │       ├── chat-agent-types.ts   # AgentState, CollectedData, AgentResponse
 │   │       ├── chat-agent-messages.ts # Agent message templates
-│   │       └── chat-agent-intents.ts # Intent detection (affirmative/negative/wantsMore)
+│   │       ├── chat-agent-intents.ts # Intent detection (affirmative/negative/wantsMore)
+│   │       └── report-card.tsx       # PDF download cards (3-card grid)
 │   ├── try/                          # /try — legacy form flow (recruiter pipeline)
 │   │   ├── page.tsx
 │   │   └── _components/
@@ -94,7 +97,7 @@ cred-dev/
 │   │   └── ...                       # back-link, gradient-text, quote-card, etc.
 │   └── ui/                           # shadcn/ui primitives
 ├── lib/                              # Frontend utilities
-│   ├── api.ts                        # Backend API client
+│   ├── api.ts                        # Backend API client (fetchWithAuth + auth:expired interceptor)
 │   ├── auth-context.tsx              # AuthProvider + useAuth() hook
 │   ├── platform-utils.ts            # URL detection + platform names (mirrors backend)
 │   ├── supabase.ts                   # Supabase client

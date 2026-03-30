@@ -9,17 +9,21 @@ FastAPI service that extracts developer data from multiple platforms and generat
 ### Two-Phase Pipeline
 
 ```
-Phase 1: EXTRACTION                    Phase 2: GENERATION
-POST /api/v1/extract                   POST /api/v1/generate/{job_id}
-        ↓                                      ↓
-┌────────────────────┐                 ┌──────────────────────┐
-│ GitHub Fetcher     │                 │ LLM Report Generator │
-│ LeetCode Fetcher   │  → raw_data DB │ (3 reports with      │  → reports DB
-│ WebSearch Fetcher  │                 │  guardrails system)  │  → PDF email
-│ Resume Parser      │                 └──────────────────────┘
-└────────────────────┘                            ↓
-                                      SSE progress streaming
-                                      GET /api/v1/generate/{job_id}/stream
+Phase 1: EXTRACTION (anonymous, rate-limited)   Phase 2: GENERATION (auth required)
+POST /api/v1/extract                            POST /api/v1/generate/{job_id}
+        ↓                                               ↓
+┌────────────────────┐                          ┌──────────────────────┐
+│ GitHub Fetcher     │                          │ LLM Report Generator │
+│ LeetCode Fetcher   │  → raw_data DB          │ (3 reports with      │  → reports DB
+│ WebSearch Fetcher  │                          │  guardrails system)  │  → PDF email
+│ Resume Parser      │                          └──────────────────────┘
+└────────────────────┘                                     ↓
+  3/hour per IP (anon)                          SSE progress streaming
+  No limit (authenticated)                      GET /api/v1/generate/{job_id}/stream
+                                                           ↓
+                                                PDF download + report history
+                                                GET /api/v1/generate/{job_id}/pdf/{type}
+                                                GET /api/v1/user/reports
 ```
 
 ### Services
@@ -28,12 +32,13 @@ POST /api/v1/extract                   POST /api/v1/generate/{job_id}
 server/cred-service/
 ├── app/
 │   ├── main.py                 # FastAPI app, CORS, startup, request logging middleware
-│   ├── config.py               # Environment settings (pydantic-settings)
+│   ├── auth.py                 # JWT validation via JWKS (ES256) — get_current_user, get_optional_user
+│   ├── config.py               # Environment settings (pydantic-settings) + JWKS URL derivation
 │   ├── logging_config.py       # Centralized logging setup (JSON prod / human-readable dev)
 │   ├── database.py             # SQLAlchemy models (AnalysisJob, RawData, Report)
 │   └── routes/
-│       ├── extract.py          # POST /extract, GET /extract/{job_id}
-│       ├── generate.py         # POST /generate/{job_id}, GET /generate/{job_id}
+│       ├── extract.py          # POST /extract (rate-limited), GET /extract/{job_id}
+│       ├── generate.py         # POST /generate (auth), GET /generate, PDF download, user reports
 │       └── stream.py           # GET /generate/{job_id}/stream (SSE)
 ├── services/
 │   ├── extraction.py           # Orchestrates platform fetchers
@@ -58,7 +63,7 @@ server/cred-service/
 Health check. Returns `{"status": "healthy"}`.
 
 ### `POST /api/v1/extract`
-Start raw data extraction. Accepts multipart form data.
+Start raw data extraction. Accepts multipart form data. **Auth optional** — anonymous requests are rate-limited to 3/hour per IP (returns 429 when exceeded). Authenticated requests bypass the limit and bind `user_id` to the job.
 
 **Parameters** (all optional, at least one URL or resume required):
 | Field | Type | Description |
@@ -85,7 +90,7 @@ Poll extraction status. Returns `status`: `pending` → `extracting` → `extrac
 When `extracted`, includes the raw data payload.
 
 ### `POST /api/v1/generate/{job_id}`
-Trigger report generation. Requires job status to be `extracted`, `failed`, or `completed`.
+Trigger report generation. **Requires authentication** (Supabase JWT via `Authorization: Bearer <token>`). Binds the authenticated user's ID to the job. Requires job status to be `extracted` or `failed` (returns 409 if already `generating` or `completed`).
 
 Sets job to `generating` and starts the background pipeline.
 
@@ -132,6 +137,57 @@ Get generation status and completed reports.
   }
 }
 ```
+
+### `POST /api/v1/generate/{job_id}/resend-email`
+Resend report emails for a completed job. **Requires authentication.**
+
+### `GET /api/v1/generate/{job_id}/pdf/{report_type}`
+Download a single report as a styled PDF. **Requires authentication.** Validates job ownership (requesting user must match `job.user_id`). `report_type` must be one of: `extensive_report`, `developer_insight`, `recruiter_insight`.
+
+Returns `application/pdf` with `Content-Disposition: attachment`.
+
+### `GET /api/v1/user/reports`
+Paginated list of the authenticated user's analysis jobs. **Requires authentication.** Returns jobs with report availability.
+
+**Note:** This route must be registered before any `{job_id}` wildcard routes in `generate.py` to prevent FastAPI from matching "user" as a job_id.
+
+**Query parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | int | 1 | Page number (≥ 1) |
+| `per_page` | int | 10 | Results per page (1–50) |
+
+**Response:**
+```json
+{
+  "reports": [
+    {
+      "job_id": "uuid",
+      "candidate_name": "John Doe",
+      "status": "completed",
+      "created_at": "2026-03-30T12:00:00",
+      "platform_urls": {"github": "...", "leetcode": "..."}
+    }
+  ],
+  "page": 1,
+  "per_page": 10,
+  "total": 5
+}
+```
+
+---
+
+## Authentication
+
+JWT-based auth via Supabase. Tokens are validated using JWKS (ES256 asymmetric keys) fetched from the Supabase project's JWKS endpoint. Key refresh happens hourly.
+
+**Dependencies (defined in `app/auth.py`):**
+- `get_current_user` — required auth, returns user dict or raises 401
+- `get_optional_user` — optional auth, returns user dict or `None`
+
+**Protected endpoints:** `POST /generate/{job_id}`, `POST /generate/{job_id}/resend-email`, `GET /generate/{job_id}/pdf/{report_type}`, `GET /user/reports`
+
+**Optional auth:** `POST /extract` (authenticated users bypass rate limit)
 
 ---
 
@@ -221,6 +277,10 @@ SMTP_FROM_NAME=CredDev
 RESEND_API_KEY=re_xxx
 RESEND_FROM_EMAIL=CredDev <you@yourdomain.com>
 
+# Auth (Supabase JWKS for JWT validation)
+SUPABASE_PROJECT_REF=xxx               # Auto-derived from CRED_SERVICE_SUPABASE_URL if not set
+# JWKS URL: https://{ref}.supabase.co/auth/v1/.well-known/jwks.json
+
 # App
 DEBUG=false
 LOG_LEVEL=INFO                          # DEBUG, INFO, WARNING, ERROR (default: INFO; overridden to DEBUG when DEBUG=true)
@@ -244,7 +304,7 @@ Three tables, auto-created on startup via `init_db()`:
 | `id` | VARCHAR PK | UUID |
 | `candidate_name` | VARCHAR | Default: "Anonymous Candidate" |
 | `candidate_email` | VARCHAR | For report delivery |
-| `user_id` | VARCHAR | Optional |
+| `user_id` | VARCHAR | Set at generation time from authenticated user's Supabase ID |
 | `status` | VARCHAR | pending/extracting/extracted/generating/completed/failed |
 | `created_at` | TIMESTAMP | |
 | `updated_at` | TIMESTAMP | |
