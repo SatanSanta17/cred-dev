@@ -1,13 +1,14 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Response
 from sqlalchemy.orm import Session
 from datetime import datetime
 from ..database import get_db, AnalysisJob, Report, SessionLocal
+from ..auth import get_current_user
 from services.report_generator import ReportGenerator
 from services.raw_data_loader import RawDataLoader
 from services.report_storage import ReportStorageService
 from services.progress_manager import progress_manager
-from services.email_service import get_email_service
+from services.email_service import get_email_service, generate_report_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -197,15 +198,69 @@ def _run_generation_pipeline(job_id: str):
         db.close()
 
 
+# =========================================
+# User report history — MUST be registered before /generate/{job_id}
+# because FastAPI matches routes in order and {job_id} would swallow "user".
+# =========================================
+
+@router.get("/user/reports")
+async def get_user_reports(
+    current_user: dict = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Returns paginated list of user's analysis jobs with report availability."""
+    offset = (page - 1) * per_page
+
+    jobs = (
+        db.query(AnalysisJob)
+        .filter(AnalysisJob.user_id == current_user["id"])
+        .order_by(AnalysisJob.created_at.desc())
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
+
+    total = (
+        db.query(AnalysisJob)
+        .filter(AnalysisJob.user_id == current_user["id"])
+        .count()
+    )
+
+    logger.info(f"Report history for user={current_user['id']}: {len(jobs)} jobs (page {page})")
+
+    return {
+        "reports": [
+            {
+                "job_id": job.id,
+                "candidate_name": job.candidate_name,
+                "status": job.status,
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "platform_urls": job.platform_urls,
+            }
+            for job in jobs
+        ],
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+    }
+
+
+# =========================================
+# Generation endpoints (wildcard {job_id} routes below)
+# =========================================
+
 @router.post("/generate/{job_id}")
 async def generate_reports(
     job_id: str,
     background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Generate intelligence reports from previously extracted raw data.
-    Supports retries — allows 'extracted', 'failed', or 'generating' status.
+    Requires authentication. Supports retries — allows 'extracted', 'failed', or 'generating' status.
     """
 
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
@@ -234,7 +289,8 @@ async def generate_reports(
             detail=f"Cannot generate reports. Current status: {job.status}. Allowed: {', '.join(allowed)}"
         )
 
-    # Reset state for retry
+    # Bind user_id to job — persists even if generation fails
+    job.user_id = current_user["id"]
     job.status = "generating"
     job.error_message = None
     job.updated_at = datetime.utcnow()
@@ -288,7 +344,11 @@ async def get_generation_status(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/generate/{job_id}/resend-email")
-async def resend_email(job_id: str, db: Session = Depends(get_db)):
+async def resend_email(
+    job_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Resend report emails for a completed job.
     Only works when job status is 'completed' and reports exist in DB.
@@ -343,3 +403,66 @@ async def resend_email(job_id: str, db: Session = Depends(get_db)):
         "status": "sent",
         "message": f"Reports resent to {job.candidate_email}"
     }
+
+
+# =========================================
+# PDF download endpoint
+# =========================================
+
+@router.get("/generate/{job_id}/pdf/{report_type}")
+async def download_report_pdf(
+    job_id: str,
+    report_type: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate and serve a report PDF for download.
+
+    report_type: 'extensive_report' | 'developer_insight' | 'recruiter_insight'
+    """
+    allowed_types = {"extensive_report", "developer_insight", "recruiter_insight"}
+    if report_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid report type. Allowed: {', '.join(sorted(allowed_types))}",
+        )
+
+    # Validate job belongs to user
+    job = db.query(AnalysisJob).filter(
+        AnalysisJob.id == job_id,
+        AnalysisJob.user_id == current_user["id"],
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    if job.status != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Reports not ready. Current status: {job.status}",
+        )
+
+    # Fetch report content from DB
+    report = db.query(Report).filter(
+        Report.job_id == job_id,
+        Report.layer == report_type,
+    ).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not generated yet")
+
+    # Generate PDF using existing function from email_service
+    try:
+        pdf_bytes = generate_report_pdf(job.candidate_name, report_type, report.content)
+    except Exception as e:
+        logger.error(f"PDF generation failed for job_id={job_id}, type={report_type}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
+    safe_name = job.candidate_name.lower().replace(" ", "-")
+    filename = f"creddev-{report_type.replace('_', '-')}-{safe_name}.pdf"
+
+    logger.info(f"PDF download for job_id={job_id}, type={report_type}, user={current_user['id']}")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

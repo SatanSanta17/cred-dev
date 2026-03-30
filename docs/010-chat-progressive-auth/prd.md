@@ -55,6 +55,9 @@ Protected API endpoints require a valid auth token in the request header. Invali
 **P1.R10 — Extraction is anonymous, generation requires auth.**
 Users can submit profile links and run extraction without authenticating. Generation (the expensive LLM step) requires a valid auth session. This is the progressive auth boundary.
 
+**P1.R11 — Authenticated users can sign out.**
+An authenticated user can sign out from within the chat interface. Sign-out clears the local session, reverts the UI to the unauthenticated state (sign-in button visible), and does not disrupt the current conversation. The user can continue chatting anonymously or sign in again.
+
 ### Acceptance Criteria
 
 - [ ] Chat interface loads at the designated route and fills the viewport
@@ -69,6 +72,8 @@ Users can submit profile links and run extraction without authenticating. Genera
 - [ ] Auth modal appears as overlay on the chat, not a page redirect
 - [ ] After auth, modal closes and conversation continues seamlessly
 - [ ] Auth state persists across page reload (session cookie/token)
+- [ ] Authenticated user can sign out from the chat header
+- [ ] After sign-out, UI reverts to unauthenticated state (sign-in button visible) without losing conversation
 - [ ] Backend returns 401 for unauthenticated requests to protected endpoints
 - [ ] Extraction API works without auth token
 - [ ] Generation API rejects requests without valid auth token

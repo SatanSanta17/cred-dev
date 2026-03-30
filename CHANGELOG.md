@@ -1,5 +1,57 @@
 # Changelog
 
+## [2026-03-30] — Progressive Auth Pipeline + PDF Delivery — Part 2 (PRD-010, Increments 2C–2F)
+
+### Added
+- `app/chat/_components/report-card.tsx` — glass-morphism PDF download cards rendered after generation completes. 3-card responsive grid (extensive, developer, recruiter) with staggered Framer Motion animations, per-card loading/error states, browser-triggered download via `downloadReportPdf()`
+- `GET /api/v1/generate/{job_id}/pdf/{report_type}` — authenticated endpoint that generates and serves a report PDF for download. Validates job ownership via `user_id`
+- `GET /api/v1/user/reports` — authenticated, paginated endpoint returning user's analysis jobs with report availability and total count. Registered before wildcard `{job_id}` routes to prevent FastAPI route swallowing
+- `getUserReports(page, perPage)`, `downloadReportPdf(jobId, type)`, `getReportPdfUrl(jobId, type)` in `lib/api.ts`
+- Anonymous IP-based rate limiting on `POST /api/v1/extract` — 3 extractions/hour per IP, in-memory tracker, returns 429 with actionable "Sign in to continue" message
+- `fetchWithAuth()` centralized wrapper in `lib/api.ts` — injects Supabase access token on all API calls, emits `auth:expired` custom event on 401 for global re-authentication
+- History-aware greeting for returning authenticated users — `GREETINGS.authenticatedWithHistory(name, reportCount)` template
+- `HISTORY_MESSAGES` (fetching/empty/header) and `RATE_LIMIT_MESSAGES` in `chat-agent-messages.ts`
+- Report history deduplication by exact platform URL match — prevents re-generating reports the user already has
+- `idle → viewing_history` state transition with delegated fetch in `chat-interface.tsx`
+- On-mount history check with `historyCheckedRef` guard to prevent duplicate fetches
+
+### Changed
+- `POST /api/v1/generate/{job_id}` — now requires authentication (`get_current_user`), binds `user_id` to job
+- `POST /api/v1/generate/{job_id}/resend-email` — now requires authentication
+- `POST /api/v1/extract` — accepts optional auth (`get_optional_user`), authenticated users bypass rate limit and get `user_id` bound to job
+- `chat-interface.tsx` — rewritten to orchestrate full pipeline: extraction → 429 handling → auth gate → history check → generation (SSE progress with ephemeral messages) → PDF delivery via `ReportCards`. Declaration order of `useCallback` hooks is critical (TDZ-safe ordering)
+- `chat-agent.ts` — `getGreeting()` now accepts `reportCount` parameter, `idle → viewing_history` transition returns empty messages (fetch delegated to interface)
+- `lib/api.ts` — all functions now use `fetchWithAuth()` instead of raw `fetch()`
+- `analysis_jobs.user_id` — now populated at generation time from authenticated user's Supabase ID
+
+### Fixed
+- FastAPI route ordering — `GET /user/reports` registered before `{job_id}` wildcard routes to prevent "user" being matched as a job_id (was returning 404)
+- JavaScript temporal dead zone (TDZ) — `useCallback` declarations reordered so `startGeneration` and `checkHistoryAndGenerate` are defined before being referenced in dependency arrays
+
+## [2026-03-27] — Chat Interface + Progressive Auth — Part 1 (PRD-010)
+
+### Added
+- `/chat` route — full-viewport chat interface with agent message list, auto-resizing input, and auto-scroll with "new messages" pill when scrolled up
+- `app/chat/_components/chat-interface.tsx` — orchestrates header (brand + auth state), message list, input bar, and auth modal
+- `app/chat/_components/chat-message.tsx` — discriminated union message renderer supporting `text`, `loading`, `action`, and `system` types. Agent messages left-aligned with brand avatar, user messages right-aligned with accent gradient
+- `app/chat/_components/chat-input.tsx` — auto-resizing textarea (Enter sends, Shift+Enter newline), optional file upload button (PDF only, 10 MB max), disabled state with contextual placeholder
+- `components/shared/auth-modal.tsx` — glass morphism overlay with Framer Motion enter/exit, GitHub + Google OAuth buttons, per-button loading spinners, error display, closes on backdrop click / Escape / successful auth
+- `lib/supabase-auth.ts` — Supabase auth helper (`signInWithProvider`, `signOut`, `getSession`, `getUser`, `getAccessToken`, `onAuthStateChange`)
+- `lib/auth-context.tsx` — `AuthProvider` React context + `useAuth()` hook exposing `user`, `isAuthenticated`, `isLoading`, `signIn`, `signOut`
+- `server/cred-service/app/auth.py` — JWKS/ES256 JWT validation with `PyJWKClient`, lazy initialization, hourly key refresh, dual algorithm support (ES256 primary, HS256 fallback), `get_current_user` and `get_optional_user` FastAPI dependencies, 503 on JWKS fetch failure
+- Sign-out button in chat header — clears local session and reverts UI to unauthenticated state
+- Typing indicator animation (`typing-bounce` keyframes + staggered delay utilities) in `globals.css`
+
+### Changed
+- All CTAs across the app now link to `/chat` instead of `/try` — updated in `hero.tsx`, `footer.tsx`, `about-cta.tsx`, and `app/report/Burhanuddin/page.tsx`
+- `/try` route retained for recruiter pipeline (not deleted)
+- `server/cred-service/app/config.py` — added `supabase_project_ref` field and `get_supabase_jwks_url()` method
+- `ARCHITECTURE.md` — added `/chat` route, chat component tree, auth files, `SUPABASE_PROJECT_REF` env var, updated limitation notes
+- `README.md` — updated user flow diagram (form → chat, auth gate, PDF in chat), updated project structure tree with chat and auth files
+- `docs/010-chat-progressive-auth/trd.md` — aligned with actual JWKS/ES256 implementation (was HS256), marked Increments 1A–1D complete, fixed env var name
+- `docs/010-chat-progressive-auth/prd.md` — added P1.R11 (sign-out requirement) with acceptance criteria
+- Fixed `NEXT_PUBLIC_SUPABASE_ANON_KEY` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` across TRD, ARCHITECTURE.md, and README.md
+
 ## [2026-03-08] — Recruiter Landing Page + Waitlist Cleanup (PRD-006)
 
 ### Added

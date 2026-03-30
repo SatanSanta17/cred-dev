@@ -9,6 +9,7 @@ const SIZES = {
 
 interface BrandProps {
   size?: keyof typeof SIZES
+  iconOnly?: boolean
   className?: string
 }
 
@@ -16,7 +17,7 @@ interface BrandProps {
  * CredDev brand mark — logo icon + gradient name.
  * Used in hero, back-link (showBrand), and anywhere brand identity is needed.
  */
-export function Brand({ size = 'md', className = '' }: BrandProps) {
+export function Brand({ size = 'md', iconOnly = false, className = '' }: BrandProps) {
   const { icon, text } = SIZES[size]
 
   return (
@@ -28,9 +29,11 @@ export function Brand({ size = 'md', className = '' }: BrandProps) {
         height={icon}
         className="rounded-full"
       />
-      <span className={`${text} font-bold`}>
-        <GradientText>CredDev</GradientText>
-      </span>
+      {!iconOnly && (
+        <span className={`${text} font-bold`}>
+          <GradientText>CredDev</GradientText>
+        </span>
+      )}
     </div>
   )
 }

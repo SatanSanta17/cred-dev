@@ -10,7 +10,14 @@ connect_args = {}
 if db_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
-engine = create_engine(db_url, connect_args=connect_args)
+engine = create_engine(
+    db_url,
+    connect_args=connect_args,
+    pool_pre_ping=True,      # Test connections before use — drops stale ones automatically
+    pool_recycle=300,         # Recycle connections older than 5 minutes
+    pool_size=5,              # Max persistent connections in the pool
+    max_overflow=10,          # Extra connections allowed under load
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

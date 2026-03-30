@@ -20,13 +20,19 @@ Just verified, fact-based developer analysis.
 ## How It Works
 
 ```
-User submits form (GitHub, LeetCode, LinkedIn, Resume)
+User chats with the CredDev agent at /chat
         ↓
-Phase 1: Extraction — fetch raw data from each platform
+Share profile links (GitHub, LeetCode, LinkedIn, etc.) + optional resume
+        ↓
+Phase 1: Extraction — fetch raw data from each platform (anonymous, 3/hour rate limit)
+        ↓
+Sign in via GitHub or Google OAuth (progressive auth gate)
+        ↓
+History check — returning users see previous reports (dedup by platform URLs)
         ↓
 Phase 2: Generation — LLM analyzes raw data, produces 3 reports
         ↓
-PDF reports emailed to the candidate
+PDF reports delivered in chat (download cards)
 ```
 
 ### Three Reports Generated
@@ -61,37 +67,43 @@ PDF reports emailed to the candidate
 ```
 cred-dev/
 ├── app/                              # Next.js App Router pages
-│   ├── page.tsx                      # Landing page
-│   ├── try/                          # /try — report generation flow
+│   ├── page.tsx                      # Landing page (CTA → /chat)
+│   ├── chat/                         # /chat — conversational report generation
 │   │   ├── page.tsx
-│   │   └── _components/              # Co-located route components
+│   │   └── _components/
+│   │       ├── chat-interface.tsx     # Full viewport chat container + state machine wiring
+│   │       ├── chat-message.tsx      # Message bubbles (text, loading, action, system)
+│   │       ├── chat-input.tsx        # Text input + file upload with preview badge
+│   │       ├── chat-agent.ts         # State machine (12 states, deterministic)
+│   │       ├── chat-agent-types.ts   # AgentState, CollectedData, AgentResponse
+│   │       ├── chat-agent-messages.ts # Agent message templates
+│   │       ├── chat-agent-intents.ts # Intent detection (affirmative/negative/wantsMore)
+│   │       └── report-card.tsx       # PDF download cards (3-card grid)
+│   ├── try/                          # /try — legacy form flow (recruiter pipeline)
+│   │   ├── page.tsx
+│   │   └── _components/
 │   │       ├── try-flow.tsx          # State machine: form → extract → generate → success
 │   │       ├── try-form.tsx          # Input form (5 fields + resume upload)
 │   │       └── generation-loader.tsx # Animated progress display
 │   ├── recruiters/                   # /recruiters — "coming soon" recruiter page
-│   │   ├── page.tsx
-│   │   └── _components/              # Co-located route components
 │   ├── about/                        # /about — team + origin story
 │   ├── report/                       # Static sample report pages
-│   └── layout.tsx
+│   └── layout.tsx                    # Root layout — AuthProvider wraps app
 ├── components/
-│   ├── sections/                     # Landing page sections
-│   │   ├── hero.tsx                  # Developer-focused hero with branding
-│   │   ├── how-it-works.tsx          # 3-step process
-│   │   ├── problem-validation.tsx    # Rotating pain point quotes
-│   │   └── footer.tsx               # CTA + copyright
 │   ├── shared/                       # Reusable across pages
-│   │   ├── back-link.tsx             # Back navigation
+│   │   ├── auth-modal.tsx            # OAuth sign-in overlay (GitHub + Google)
 │   │   ├── brand.tsx                 # CredDev logo + gradient name
-│   │   ├── gradient-text.tsx
-│   │   ├── quote-card.tsx            # Single quote card
-│   │   ├── quotes-carousel.tsx       # Rotating quote carousel (desktop + mobile)
-│   │   └── waitlist-count.tsx        # Real-time waitlist counter
+│   │   ├── footer.tsx               # CTA + copyright (CTA → /chat)
+│   │   └── ...                       # back-link, gradient-text, quote-card, etc.
 │   └── ui/                           # shadcn/ui primitives
 ├── lib/                              # Frontend utilities
-│   ├── api.ts                        # Backend API client
-│   ├── use-generation-progress.ts    # SSE hook for real-time progress
+│   ├── api.ts                        # Backend API client (fetchWithAuth + auth:expired interceptor)
+│   ├── auth-context.tsx              # AuthProvider + useAuth() hook
+│   ├── platform-utils.ts            # URL detection + platform names (mirrors backend)
 │   ├── supabase.ts                   # Supabase client
+│   ├── supabase-auth.ts             # Auth helpers (signIn, signOut, getSession)
+│   ├── use-extraction-polling.ts     # Extraction polling hook for chat flow
+│   ├── use-generation-progress.ts    # SSE hook for real-time progress
 │   └── utils.ts
 ├── server/cred-service/              # FastAPI backend (see server README)
 └── reports/                          # Sample analysis reports
@@ -112,7 +124,7 @@ npm run dev
 **Environment variables** (`.env.local`):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 NEXT_PUBLIC_CRED_SERVICE_API_URL=http://localhost:8000   # backend URL
 ```
 
