@@ -48,11 +48,8 @@ def _get_jwks_client() -> PyJWKClient:
         if not jwks_url:
             raise RuntimeError("Supabase JWKS URL is not configured")
 
-        # Supabase requires the `apikey` header on all endpoints, including JWKS.
-        # Without it, the endpoint returns 401 Unauthorized.
-        supabase_key = settings.get_supabase_key()
-        headers = {"apikey": supabase_key} if supabase_key else {}
-        _jwks_client = PyJWKClient(jwks_url, headers=headers)
+        # The .well-known JWKS endpoint is public — no apikey header required.
+        _jwks_client = PyJWKClient(jwks_url)
         _jwks_client_init_time = now
         logger.info(f"JWKS client initialized from {jwks_url}")
 

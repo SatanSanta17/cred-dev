@@ -73,13 +73,13 @@ class Settings(BaseSettings):
     def get_supabase_jwks_url(self) -> str:
         """Return the JWKS endpoint URL for Supabase Auth JWT validation."""
         if self.supabase_project_ref:
-            return f"https://{self.supabase_project_ref}.supabase.co/auth/v1/jwks"
+            return f"https://{self.supabase_project_ref}.supabase.co/auth/v1/.well-known/jwks.json"
         # Fallback: derive project ref from the Supabase URL
         url = self.get_supabase_url()
         if url:
             # https://xdwmbfluuhyvtuseibfq.supabase.co → xdwmbfluuhyvtuseibfq
             ref = url.replace("https://", "").split(".")[0]
-            return f"https://{ref}.supabase.co/auth/v1/jwks"
+            return f"https://{ref}.supabase.co/auth/v1/.well-known/jwks.json"
         return ""
 
 
